@@ -55,6 +55,10 @@ npm install
 node server.js
 ```
 
+### AI Agent Install (recommended)
+
+Have Claude Code, Cursor, or any AI agent connected to your server? Just give it [this prompt](docs/AGENT-INSTALL-PROMPT.md) — it handles everything: Node.js, tmux, clone, .env, HTTPS, systemd. You only need to create a bot at @BotFather and provide the token.
+
 ### Set up HTTPS (required by Telegram)
 
 ```bash
@@ -137,15 +141,19 @@ All via `.env` file. See [.env.example](.env.example) for details.
 | `MGMT_TOKEN` | (disabled) | Token for management API |
 | `VOICE_LANGUAGE` | en | Voice recognition language |
 
-## Security
+## Security — 7 Layers
 
-- **Telegram HMAC-SHA256** — cryptographic verification of Mini App data
-- **User whitelist** — only specified Telegram user IDs
-- **IP-bound JWT** — 4h session tokens tied to client IP
-- **Rate limiting** — /auth endpoint limited to 10 req/min per IP
-- **Origin check** — WebSocket accepts only configured domains
-- **Audit logging** — terminal I/O logged via tmux pipe-pane
-- **Management API** — disabled by default
+Your teletty instance is **your private terminal**. No one else can access it.
+
+| Layer | What it does |
+|-------|-------------|
+| **1. Telegram HMAC-SHA256** | Only Telegram servers can generate valid auth data. Impossible to forge without your bot token. |
+| **2. User ID whitelist** | Only YOUR Telegram account (by numeric ID) is allowed. Everyone else gets "Access denied". |
+| **3. IP-bound JWT** | Session tokens are locked to your IP address. Stolen token = useless from another IP. Expires in 4 hours. |
+| **4. initData freshness** | Auth data older than 5 minutes is rejected. Prevents replay attacks. |
+| **5. Timing-safe auth** | All comparisons use `crypto.timingSafeEqual`. Prevents timing side-channel attacks. |
+| **6. Rate limiting** | Max 10 auth attempts per minute per IP. Brute force = blocked. |
+| **7. Sanitized environment** | Terminal sessions only see PATH, HOME, USER, SHELL, LANG, TERM. Server secrets (BOT_TOKEN, SESSION_SECRET) are never leaked to the terminal. |
 
 ## Project Structure
 
