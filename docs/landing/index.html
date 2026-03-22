@@ -4,8 +4,112 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>teletty -- Your server. Your phone. One tap.</title>
-<meta name="description" content="A Telegram Mini App that gives you a full terminal with smart buttons, AI agent support, and voice input. Open source.">
+<meta name="description" content="teletty is an open-source Telegram Mini App that gives you a full terminal on your phone. Smart buttons, Claude Code integration, voice input, multi-tab tmux sessions. No SSH app needed.">
 <meta name="theme-color" content="#000000">
+<meta name="keywords" content="telegram terminal, mini app, smart buttons, claude code, remote terminal, mobile ssh, web terminal, tmux, voice commands, open source">
+<meta name="author" content="Oleg Chetrean">
+<link rel="canonical" href="https://megapromoting.com/teletty">
+<!-- Open Graph -->
+<meta property="og:title" content="teletty -- A full terminal in your pocket, via Telegram">
+<meta property="og:description" content="Open-source Telegram Mini App with smart buttons, Claude Code integration, voice input. Run AI coding agents from your phone.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://megapromoting.com/teletty">
+<meta property="og:site_name" content="teletty">
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="teletty -- Terminal on your phone via Telegram">
+<meta name="twitter:description" content="Smart buttons, Claude Code integration, voice input. Open source.">
+<!-- Schema.org JSON-LD -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "teletty",
+  "description": "A full terminal in your pocket, via Telegram. Open-source Telegram Mini App with smart buttons, Claude Code integration, voice input, and multi-tab tmux sessions.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Any (Telegram)",
+  "url": "https://github.com/teletty/teletty",
+  "downloadUrl": "https://www.npmjs.com/package/teletty",
+  "softwareVersion": "1.0.0",
+  "author": {
+    "@type": "Person",
+    "name": "Oleg Chetrean",
+    "url": "https://megapromoting.com"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "MEGA PROMOTING",
+    "url": "https://megapromoting.com"
+  },
+  "license": "https://opensource.org/licenses/MIT",
+  "programmingLanguage": ["JavaScript", "Node.js"],
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "featureList": [
+    "Smart buttons for interactive terminal prompts",
+    "Claude Code CLI integration with approve/deny",
+    "Auto-approve mode with dangerous command safety",
+    "Multi-tab tmux sessions (up to 4)",
+    "Voice input via Web Speech API and Azure Whisper",
+    "Telegram HMAC-SHA256 authentication",
+    "Emergency HTTPS management API",
+    "Mobile-optimized controls",
+    "Session persistence via tmux",
+    "Tokyo Night dark theme"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is teletty?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "teletty is an open-source Telegram Mini App that gives you a full terminal on your phone. It connects to your server via WebSocket, runs tmux sessions, and renders a real terminal with xterm.js. Smart buttons detect interactive prompts and show one-tap buttons instead of requiring keyboard input."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does teletty work with Claude Code?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "teletty detects Claude Code CLI permission prompts (Allow/Deny, Do you want to proceed?) and renders them as clickable buttons. It also has an auto-approve mode that automatically accepts safe prompts while blocking dangerous commands like rm -rf or DROP TABLE."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is teletty free and open source?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. teletty is 100% free and open source under the MIT license. You can self-host it on any server. The entire codebase is 889 lines across 7 files with zero frameworks and zero build step."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I install teletty?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Three options: npx teletty (fastest), docker compose up -d (Docker), or git clone + npm install + node server.js (manual). You need a Telegram bot token from @BotFather and HTTPS (required by Telegram for Mini Apps)."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is teletty secure?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "teletty uses Telegram's HMAC-SHA256 authentication (impossible to forge without the bot token), user ID whitelisting, IP-bound JWT sessions with 4-hour expiry, timing-safe comparisons, rate limiting, Content Security Policy headers, and sanitized environment variables for terminal processes."
+      }
+    }
+  ]
+}
+</script>
 <style>
 /* ===== RESET & BASE ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
