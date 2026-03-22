@@ -20,7 +20,7 @@
     const token = params.get('token');
     const tg = window.Telegram?.WebApp;
     if (!tg?.initData) {
-      showAuthError('Access denied. Open from Telegram.');
+      showBrowserFallback();
       return false;
     }
     try {
@@ -53,6 +53,25 @@
     div.className = 'auth-error';
     div.textContent = msg;
     overlay.appendChild(div);
+  }
+
+  function showBrowserFallback() {
+    const overlay = document.getElementById('authOverlay');
+    overlay.innerHTML = '';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#000;display:flex;align-items:center;justify-content:center;z-index:100;flex-direction:column;gap:24px;padding:40px;font-family:-apple-system,sans-serif;';
+    overlay.innerHTML = [
+      '<div style="font-size:48px;font-weight:800;color:#fff;letter-spacing:-1px;">teletty</div>',
+      '<div style="font-size:18px;color:#a0a0a0;text-align:center;max-width:400px;line-height:1.6;">A full terminal in your pocket, via Telegram.<br>Smart buttons, Claude Code integration, voice input.</div>',
+      '<div style="margin-top:16px;padding:16px 24px;background:#111;border:1px solid #222;border-radius:12px;text-align:center;">',
+      '  <div style="color:#666;font-size:13px;margin-bottom:12px;">This app runs inside Telegram as a Mini App.</div>',
+      '  <div style="color:#fff;font-size:15px;">Open your teletty bot in Telegram and tap the Menu Button.</div>',
+      '</div>',
+      '<div style="display:flex;gap:12px;margin-top:8px;">',
+      '  <a href="https://github.com/olegchetrean/teletty" style="padding:12px 24px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">View on GitHub</a>',
+      '  <a href="https://olegchetrean.github.io/teletty/" style="padding:12px 24px;background:transparent;color:#3b82f6;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #3b82f6;">Landing Page</a>',
+      '</div>',
+      '<div style="margin-top:24px;color:#333;font-size:12px;">Install: npx teletty init && npx teletty</div>',
+    ].join('\n');
   }
 
   function createTerminal(tabId) {
