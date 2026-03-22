@@ -1,7 +1,6 @@
 node_modules/
 .env
-keys/private.pem
-keys/public.pem
+keys/
 *.log
 .DS_Store
 docs/landing/node_modules/

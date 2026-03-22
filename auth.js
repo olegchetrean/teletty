@@ -50,10 +50,15 @@ function verifyTelegramInitData(initData) {
     .join('\n');
   const secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();
   const expectedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-  if (expectedHash !== hash) return null;
+  try {
+    if (!crypto.timingSafeEqual(Buffer.from(expectedHash, 'hex'), Buffer.from(hash, 'hex'))) return null;
+  } catch { return null; }
+  // Reject stale initData (max 5 minutes)
+  const authDate = parseInt(params.get('auth_date'), 10);
+  if (isNaN(authDate) || Date.now() / 1000 - authDate > 300) return null;
   try {
     const user = JSON.parse(params.get('user') || '{}');
-    return { telegramId: String(user.id), authDate: params.get('auth_date') };
+    return { telegramId: String(user.id), authDate };
   } catch { return null; }
 }
 

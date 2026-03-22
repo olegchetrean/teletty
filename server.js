@@ -25,8 +25,13 @@ const MGMT_TOKEN = process.env.MGMT_TOKEN;
 
 if (MGMT_TOKEN) {
   app.post('/api/exec', (req, res) => {
-    const token = req.headers['x-mgmt-token'];
-    if (token !== MGMT_TOKEN) {
+    const token = req.headers['x-mgmt-token'] || '';
+    const crypto = require('crypto');
+    try {
+      if (!crypto.timingSafeEqual(Buffer.from(token), Buffer.from(MGMT_TOKEN))) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+    } catch {
       return res.status(403).json({ error: 'Forbidden' });
     }
     const { command, timeout } = req.body;

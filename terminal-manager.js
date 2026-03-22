@@ -9,6 +9,7 @@ const TAB_ID_REGEX = /^[a-zA-Z0-9_-]{1,20}$/;
 const sessions = new Map();
 
 function createSession(userId, tabId) {
+  if (!/^\d+$/.test(userId)) throw new Error(`Invalid userId: ${userId}`);
   if (!TAB_ID_REGEX.test(tabId)) throw new Error(`Invalid tabId: ${tabId}`);
   const userSessions = getActiveSessions(userId);
   if (userSessions.length >= MAX_SESSIONS) throw new Error(`Max ${MAX_SESSIONS} sessions reached`);
@@ -30,7 +31,11 @@ function createSession(userId, tabId) {
     rows: 40,
     cwd: SHELL_CWD,
     env: {
-      ...process.env,
+      PATH: process.env.PATH,
+      HOME: process.env.HOME || '/root',
+      USER: process.env.USER || 'root',
+      SHELL: process.env.SHELL || '/bin/bash',
+      LANG: process.env.LANG || 'en_US.UTF-8',
       TERM: 'xterm-256color',
     },
   });
