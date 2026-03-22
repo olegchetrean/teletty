@@ -208,10 +208,12 @@ wss.on('connection', (ws, request) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`[terminal-server] Running on 127.0.0.1:${PORT}`);
+  console.log(`\n  teletty v1.0.0`);
+  console.log(`  http://127.0.0.1:${PORT}`);
   if (ALLOWED_ORIGINS.length > 0) {
-    console.log(`[terminal-server] Allowed origins: ${ALLOWED_ORIGINS.join(', ')}`);
+    console.log(`  Origins: ${ALLOWED_ORIGINS.join(', ')}`);
   } else {
-    console.log(`[terminal-server] WARNING: No ALLOWED_ORIGINS set — accepting all origins`);
+    console.log(`  WARNING: No ALLOWED_ORIGINS set`);
   }
+  console.log('');
 });

@@ -1,29 +1,28 @@
 {
-  "name": "telegram-terminal-miniapp",
+  "name": "teletty",
   "version": "1.0.0",
-  "description": "Web terminal accessible from Telegram Mini App. Full shell access on your server with smart buttons, voice input, multi-tab, and Claude Code integration.",
+  "description": "A full terminal in your pocket, via Telegram. Smart buttons, Claude Code integration, voice input, multi-tab.",
   "main": "server.js",
+  "bin": {
+    "teletty": "./bin/teletty.js"
+  },
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "node --test test/"
   },
   "keywords": [
-    "telegram",
-    "mini-app",
-    "terminal",
-    "web-terminal",
-    "xterm",
-    "claude-code",
-    "openclaw",
-    "remote-shell",
-    "tmux"
+    "telegram", "mini-app", "terminal", "web-terminal", "xterm",
+    "claude-code", "remote-shell", "tmux", "ssh", "teletty",
+    "smart-buttons", "voice-terminal", "mobile-terminal"
   ],
-  "author": "MEGA PROMOTING S.R.L.",
+  "author": "Oleg Chetrean",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aichat-md/telegram-terminal-miniapp"
+    "url": "https://github.com/teletty/teletty"
   },
+  "homepage": "https://teletty.dev",
   "engines": {
     "node": ">=18.0.0"
   },
