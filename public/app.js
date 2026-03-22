@@ -20,7 +20,7 @@
     const token = params.get('token');
     const tg = window.Telegram?.WebApp;
     if (!tg?.initData) {
-      showAuthError('Acces interzis. Deschide din Telegram.');
+      showAuthError('Access denied. Open from Telegram.');
       return false;
     }
     try {
@@ -33,7 +33,7 @@
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        showAuthError(err.error || `Eroare autentificare (${resp.status})`);
+        showAuthError(err.error || `Authentication error (${resp.status})`);
         return false;
       }
       const data = await resp.json();
@@ -41,7 +41,7 @@
       history.replaceState(null, '', location.pathname);
       return true;
     } catch (e) {
-      showAuthError('Eroare conexiune server');
+      showAuthError('Server connection error');
       return false;
     }
   }
@@ -124,7 +124,7 @@
           if (state.tabs[tabId]) state.tabs[tabId].ws = connectWS(tabId, terminal, fitAddon, retries + 1);
         }, delays[retries]);
       } else {
-        terminal.write('\r\n\x1b[31mReconectare esuata. Apasa pe terminal pentru retry.\x1b[0m\r\n');
+        terminal.write('\r\n\x1b[31mReconnect failed. Tap terminal to retry.\x1b[0m\r\n');
         terminal.textarea?.addEventListener('focus', () => {
           if (state.tabs[tabId]?.ws?.readyState !== WebSocket.OPEN) state.tabs[tabId].ws = connectWS(tabId, terminal, fitAddon, 0);
         }, { once: true });
@@ -299,7 +299,7 @@
 
   function updateStatus(connected) {
     document.getElementById('statusDot').classList.toggle('disconnected', !connected);
-    document.getElementById('statusText').textContent = connected ? 'Conectat' : 'Deconectat...';
+    document.getElementById('statusText').textContent = connected ? 'Connected' : 'Disconnected...';
   }
 
   async function init() {
