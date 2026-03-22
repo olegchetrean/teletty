@@ -1,117 +1,120 @@
-# Telegram Terminal Mini App
+# teletty
 
-Full web terminal accessible from Telegram as a Mini App. Get shell access to your server directly from your phone — with smart buttons, voice input, multi-tab, and Claude Code integration.
+**A full terminal in your pocket, via Telegram.**
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node.js >= 18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
+
+Access any server from your phone using a Telegram Mini App. Smart buttons for interactive prompts, Claude Code integration, voice input, multi-tab tmux sessions — no SSH app needed.
+
+```
+$ claude "fix the login bug"
+  Reading src/auth.js...
+  Editing src/auth.js...
+
+  Allow Edit tool?  [Allow]  [Deny]     <-- smart buttons appear
+```
 
 ## Features
 
-- **Full terminal** — xterm.js + WebSocket + tmux (sessions survive disconnects)
-- **Telegram auth** — HMAC-SHA256 verification of Telegram initData (impossible to forge)
-- **User whitelist** — only specified Telegram user IDs can access
-- **Multi-tab** — up to 4 concurrent terminal sessions
-- **Smart buttons** — auto-detects interactive prompts (Y/n, numbered options, Allow/Deny) and shows clickable buttons
-- **Claude Code support** — recognizes Claude Code permission prompts and renders approve/deny buttons
-- **Auto-approve mode** — automatically accepts Claude Code prompts (with safety checks for dangerous commands)
-- **Voice input** — Web Speech API (browser-native) with optional Azure OpenAI Whisper server-side fallback
+- **Smart buttons** — auto-detects interactive prompts (Y/n, numbered options, Allow/Deny) and shows one-tap buttons
+- **Claude Code ready** — recognizes Claude Code CLI permission prompts with approve/deny buttons
+- **Auto-approve mode** — automatically accepts prompts with safety checks (blocks rm -rf, DROP, DELETE)
+- **Multi-tab** — up to 4 concurrent tmux sessions that survive disconnects
+- **Voice input** — push-to-talk via Web Speech API, with optional Azure Whisper fallback
+- **Telegram-native auth** — HMAC-SHA256 verification, user ID whitelist, IP-bound JWT sessions
 - **Management API** — execute commands via HTTPS when SSH is down
-- **Idle timeout** — sessions killed after 30 min inactivity (configurable)
-- **Audit logging** — all terminal output logged via tmux pipe-pane
-- **IP binding** — session tokens bound to client IP
-- **Mobile-optimized** — control buttons for arrow keys, Tab, Esc, Ctrl+C
-- **Tokyo Night theme** — dark theme, easy on the eyes
+- **Mobile controls** — buttons for arrow keys, Tab, Esc, Ctrl+C
+- **Tokyo Night theme** — dark theme, optimized for mobile screens
+- **889 lines of code** — zero frameworks, zero build step, zero transpilation
 
 ## Quick Start
 
-### 1. Clone and configure
+### npx (fastest)
 
 ```bash
-git clone https://github.com/olegchetrean/mini-terminal.git
-cd mini-terminal
-cp .env.example .env
-nano .env  # Set BOT_TOKEN, ALLOWED_USER_IDS, SESSION_SECRET
+npx teletty init    # creates .env from template
+nano .env           # set BOT_TOKEN, ALLOWED_USER_IDS, SESSION_SECRET
+npx teletty
 ```
 
-### 2. Generate keys (optional, for /terminal bot command)
+### Docker
 
 ```bash
-mkdir -p keys
-openssl genrsa -out keys/private.pem 2048
-openssl rsa -in keys/private.pem -pubout -out keys/public.pem
+git clone https://github.com/teletty/teletty.git && cd teletty
+cp .env.example .env && nano .env
+docker compose up -d
 ```
 
-### 3. Install
+### Manual
 
 ```bash
+git clone https://github.com/teletty/teletty.git && cd teletty
+cp .env.example .env && nano .env
 npm install
-sudo apt install tmux  # if not installed
-```
-
-### 4. Run
-
-```bash
 node server.js
-# or with PM2:
-pm2 start server.js --name terminal-server
 ```
 
-### 5. HTTPS (required for Telegram Mini Apps)
-
-Copy `nginx.conf.template` to `/etc/nginx/sites-enabled/terminal.conf`, edit `server_name`, then:
+### Set up HTTPS (required by Telegram)
 
 ```bash
+# Copy and edit nginx config
+cp nginx.conf.template /etc/nginx/sites-enabled/teletty.conf
+# Edit server_name, then:
 sudo nginx -t && sudo nginx -s reload
 sudo certbot --nginx -d terminal.yourdomain.com
 ```
 
-### 6. DNS
+### Configure your Telegram bot
 
-Add an A record: `terminal.yourdomain.com` → your server IP
-
-### 7. BotFather
-
-1. Open [@BotFather](https://t.me/BotFather) on Telegram
-2. `/mybots` → select your bot → Bot Settings → Menu Button
+1. Open [@BotFather](https://t.me/BotFather)
+2. `/mybots` > your bot > Bot Settings > Menu Button
 3. Set URL: `https://terminal.yourdomain.com/`
 4. Set text: `Terminal`
 
-### 8. Find your Telegram user ID
+### Find your Telegram user ID
 
-Send any message to your bot and check the logs:
+Send any message to your bot, then check logs for `[ws] Connected: user=XXXXXXX`. Add that ID to `ALLOWED_USER_IDS` in `.env`.
 
-```bash
-pm2 logs terminal-server
-```
-
-Look for `[ws] Connected: user=XXXXXXX` — that's your Telegram ID. Add it to `ALLOWED_USER_IDS` in `.env`.
-
-## Architecture
+## How It Works
 
 ```
-Telegram (tap Menu Button → Terminal)
-    → https://terminal.yourdomain.com/  (Telegram WebView)
-    → POST /auth (initData HMAC verification + whitelist)
-    → WebSocket wss://terminal.yourdomain.com/ws
-    → node-pty → tmux (persistent shell)
-    → xterm.js renders output
-    → output-parser detects prompts → smart buttons appear
+Telegram (tap Menu Button)
+  -> Mini App WebView loads
+  -> POST /auth (HMAC-SHA256 verification + whitelist check)
+  -> WebSocket connection established
+  -> node-pty spawns tmux session
+  -> xterm.js renders terminal output
+  -> output-parser detects prompts -> smart buttons appear
 ```
 
-## Files
+## Smart Buttons
 
-| File | Purpose |
-|------|---------|
-| `server.js` | Express + WebSocket server, auth endpoint, voice transcription, management API |
-| `auth.js` | Telegram initData HMAC-SHA256 verification, JWT sessions (4h), user whitelist |
-| `terminal-manager.js` | tmux session management, idle timeout, audit logging, resize |
-| `output-parser.js` | Detects Y/n, numbered options, Allow/Deny prompts from terminal output |
-| `public/index.html` | UI: tab bar, terminal, smart buttons, control bar, status bar |
-| `public/app.js` | Frontend: xterm.js, WebSocket, tabs, auto-approve, voice input |
-| `public/vendor/` | xterm.js 5.5.0 + FitAddon + WebGL addon (vendored, no CDN needed) |
-| `nginx.conf.template` | Nginx reverse proxy config with WebSocket support |
-| `.env.example` | All configuration options documented |
+The output parser detects 7 types of interactive prompts:
+
+| Prompt Type | Example | Buttons |
+|-------------|---------|---------|
+| Y/n confirmation | `Continue? [Y/n]` | Yes / No |
+| Numbered options | `1) Install  2) Update` | 1: Install / 2: Update |
+| Letter options | `a) Option A  b) Option B` | a / b |
+| Allow/Deny | `Allow this action?` | Allow / Deny |
+| Claude Code | `Do you want to proceed?` | Yes / No |
+| Tool permission | `Bash command: ls` | Yes / No |
+| Press Enter | `Press Enter to continue` | Enter |
+
+Buttons for dangerous commands (`rm -rf`, `DROP`, `DELETE`, `shutdown`) are highlighted in red.
+
+## Auto-Approve Mode
+
+Two-click activation for safety:
+1. First click: "Confirm?" (yellow)
+2. Second click: Active (red, pulsing) — auto-accepts Y/n and Allow prompts
+3. Does NOT auto-approve dangerous commands
+4. Auto-disables after 10 minutes
 
 ## Configuration
 
-All configuration is via `.env` file. See [.env.example](.env.example) for all options.
+All via `.env` file. See [.env.example](.env.example) for details.
 
 ### Required
 
@@ -119,107 +122,62 @@ All configuration is via `.env` file. See [.env.example](.env.example) for all o
 |----------|-------------|
 | `BOT_TOKEN` | Telegram bot token from @BotFather |
 | `ALLOWED_USER_IDS` | Comma-separated Telegram user IDs |
-| `SESSION_SECRET` | Random string for JWT signing |
+| `SESSION_SECRET` | Random string for JWT signing (`openssl rand -hex 32`) |
 
 ### Optional
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | 7681 | Server port |
-| `ALLOWED_ORIGINS` | (all) | Comma-separated HTTPS origins for WebSocket |
+| `ALLOWED_ORIGINS` | (all) | HTTPS origins for WebSocket |
 | `MAX_SESSIONS` | 4 | Max terminal tabs per user |
 | `IDLE_TIMEOUT_MINUTES` | 30 | Kill idle sessions after N minutes |
 | `SHELL_COMMAND` | tmux | Shell to spawn |
 | `SHELL_CWD` | /root | Working directory |
-| `MGMT_TOKEN` | (disabled) | Token for POST /api/exec management API |
-| `AZURE_OPENAI_ENDPOINT` | (disabled) | Azure endpoint for server-side voice transcription |
-| `AZURE_OPENAI_API_KEY` | (disabled) | Azure API key for Whisper |
-| `VOICE_LANGUAGE` | en | Default voice recognition language |
+| `MGMT_TOKEN` | (disabled) | Token for management API |
+| `VOICE_LANGUAGE` | en | Voice recognition language |
 
 ## Security
 
-- **Authentication**: Telegram initData HMAC-SHA256 — cryptographically verified by Telegram
-- **Whitelist**: Only specified Telegram user IDs can access
-- **Session JWT**: 4h expiry, bound to client IP
-- **Origin check**: WebSocket accepts only configured domains
-- **Idle kill**: Inactive sessions terminated automatically
-- **Max sessions**: Limit concurrent terminals per user
-- **Audit log**: All terminal I/O logged via tmux pipe-pane
-- **Management API**: Disabled by default, requires token when enabled
+- **Telegram HMAC-SHA256** — cryptographic verification of Mini App data
+- **User whitelist** — only specified Telegram user IDs
+- **IP-bound JWT** — 4h session tokens tied to client IP
+- **Rate limiting** — /auth endpoint limited to 10 req/min per IP
+- **Origin check** — WebSocket accepts only configured domains
+- **Audit logging** — terminal I/O logged via tmux pipe-pane
+- **Management API** — disabled by default
 
-## Smart Buttons
+## Project Structure
 
-The output parser detects interactive prompts and shows clickable buttons:
+| File | Lines | Purpose |
+|------|-------|---------|
+| `server.js` | 230 | Express + WebSocket server, auth, voice, management API |
+| `auth.js` | 87 | Telegram HMAC verification, JWT sessions, whitelist |
+| `terminal-manager.js` | 103 | tmux session lifecycle, idle timeout, audit |
+| `output-parser.js` | 88 | Smart prompt detection engine (7 types) |
+| `public/app.js` | 320 | Frontend: xterm.js, tabs, auto-approve, voice |
+| `public/index.html` | 79 | UI layout, Tokyo Night CSS |
+| `bin/teletty.js` | 35 | CLI entry point |
 
-| Prompt Type | Example | Buttons |
-|------------|---------|---------|
-| Y/n confirmation | `Continue? [Y/n]` | Yes / No |
-| Numbered options | `1) Option A  2) Option B` | 1: Option A / 2: Option B |
-| Allow/Deny | `Allow this action? Allow / Deny` | Allow / Deny |
-| Claude Code | `Do you want to proceed?` | Yes / No |
-| Press Enter | `Press Enter to continue` | Enter |
+## Testing
 
-**Safety**: Buttons for dangerous commands (rm -rf, DROP, DELETE, shutdown) are highlighted in red.
+```bash
+npm test
+```
 
-## Auto-Approve Mode
-
-Click the lightning bolt button to enable auto-approve:
-1. First click: "Confirm?" (yellow)
-2. Second click: Active (red, pulsing)
-3. Auto-accepts all Y/n and Allow prompts
-4. **Safety**: Does NOT auto-approve dangerous commands
-5. Auto-disables after 10 minutes
-
-## Voice Input
-
-Two modes:
-1. **Browser Speech API** (default): Uses Chrome/Safari built-in speech recognition. No server config needed.
-2. **Azure Whisper** (optional): Server-side transcription via Azure OpenAI Whisper Large v3. Set `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_API_KEY` in `.env`.
-
-The client tries browser speech first. If unavailable (Firefox, some mobile browsers), falls back to server-side Whisper.
+26 tests covering output-parser (prompt detection, ANSI stripping, dangerous patterns) and auth (HMAC verification, JWT sessions, whitelist).
 
 ## Use Cases
 
 - **Server management from phone** — restart services, check logs, deploy
-- **Claude Code on the go** — run Claude Code CLI with smart approve buttons
-- **OpenClaw agents** — manage your OpenClaw bot directly from Telegram
-- **Emergency access** — when SSH is down, use the management API via HTTPS
-- **Teaching/demos** — show terminal to students via Telegram screen share
+- **Claude Code on the go** — run AI coding agents with one-tap approve
+- **Emergency access** — HTTPS management API when SSH is down
+- **Team access** — whitelist multiple Telegram users, each gets isolated sessions
 
-## Customization
+## Contributing
 
-### Change theme
-Edit `public/index.html` CSS variables. Default is Tokyo Night dark.
-
-### Add control buttons
-In `public/index.html`, add to `.control-bar`:
-```html
-<button class="ctrl-btn" id="btnCustom">Cmd</button>
-```
-In `public/app.js`, add event listener:
-```javascript
-document.getElementById('btnCustom').addEventListener('click', () => send('your command\n'));
-```
-
-### Change shell
-Set in `.env`:
-```env
-SHELL_COMMAND=bash
-SHELL_ARGS=--login
-```
-
-### Multiple users
-```env
-ALLOWED_USER_IDS=621545666,123456789,987654321
-```
-
-## Requirements
-
-- Node.js >= 18
-- tmux (for persistent sessions)
-- Nginx + SSL certificate (Telegram requires HTTPS)
-- A Telegram bot (create via @BotFather)
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 
-MIT
+[MIT](LICENSE) -- Oleg Chetrean
