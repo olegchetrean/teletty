@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>teletty -- A full terminal in your pocket</title>
+<meta name="description" content="Access any server from Telegram. Smart buttons, Claude Code integration, voice input. Open source terminal Mini App.">
+<meta name="theme-color" content="#1a1b26">
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #1a1b26;
+  --bg-dark: #16161e;
+  --bg-lighter: #1e2030;
+  --bg-surface: #222436;
+  --border: #292e42;
+  --border-highlight: #3b4261;
+  --text: #c0caf5;
+  --text-dim: #565f89;
+  --text-muted: #414868;
+  --blue: #7aa2f7;
+  --green: #9ece6a;
+  --red: #f7768e;
+  --purple: #bb9af7;
+  --yellow: #e0af68;
+  --cyan: #7dcfff;
+  --orange: #ff9e64;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', 'Consolas', monospace;
+  --max-w: 960px;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-image:
+    radial-gradient(circle at 1px 1px, var(--border) 0.5px, transparent 0);
+  background-size: 32px 32px;
+  background-position: center;
+}
+
+a { color: var(--blue); text-decoration: none; transition: color 0.2s; }
+a:hover { color: var(--cyan); }
+
+.container { max-width: var(--max-w); margin: 0 auto; padding: 0 24px; }
+
+h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+
+section { padding: 80px 0; }
+
+.section-title {
+  font-size: 2rem;
+  margin-bottom: 16px;
+  text-align: center;
+  color: var(--text);
+}
+
+.section-subtitle {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 1.05rem;
+  max-width: 600px;
+  margin: 0 auto 48px;
+}
+
+/* ===== HERO ===== */
+.hero {
+  padding: 100px 0 80px;
+  text-align: center;
+  position: relative;
+  background: linear-gradient(180deg, #1a1b26 0%, #1e2030 50%, #1a1b26 100%);
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background:
+    radial-gradient(ellipse 600px 300px at 50% 30%, rgba(122, 162, 247, 0.06) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  margin-bottom: 28px;
+  background: var(--bg-dark);
+}
+
+.hero h1 {
+  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  margin-bottom: 20px;
+  color: #ffffff;
+  letter-spacing: -0.03em;
+}
+
+.hero h1 span {
+  background: linear-gradient(135deg, var(--blue), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-sub {
+  font-size: clamp(1rem, 2.5vw, 1.2rem);
+  color: var(--text-dim);
+  max-width: 580px;
+  margin: 0 auto 36px;
+  line-height: 1.6;
+}
+
+.cta-group {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 48px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--blue);
+  color: var(--bg-dark);
+}
+.btn-primary:hover {
+  background: #89b4fa;
+  color: var(--bg-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(122, 162, 247, 0.3);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border-highlight);
+}
+.btn-secondary:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  transform: translateY(-1px);
+}
+
+/* ===== TERMINAL MOCKUP ===== */
+.terminal-mockup {
+  max-width: 640px;
+  margin: 0 auto;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.3),
+    0 8px 40px rgba(0,0,0,0.4),
+    0 0 80px rgba(122, 162, 247, 0.05);
+}
+
+.terminal-bar {
+  background: #16161e;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.terminal-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.terminal-dot.r { background: var(--red); opacity: 0.8; }
+.terminal-dot.y { background: var(--yellow); opacity: 0.8; }
+.terminal-dot.g { background: var(--green); opacity: 0.8; }
+
+.terminal-title {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.terminal-body {
+  background: var(--bg-dark);
+  padding: 20px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+
+.terminal-body pre {
+  margin: 0;
+  white-space: pre;
+}
+
+.t-prompt { color: var(--green); }
+.t-cmd { color: #ffffff; }
+.t-dim { color: var(--text-muted); }
+.t-blue { color: var(--blue); }
+.t-purple { color: var(--purple); }
+.t-yellow { color: var(--yellow); }
+.t-red { color: var(--red); }
+.t-green { color: var(--green); }
+.t-cyan { color: var(--cyan); }
+.t-orange { color: var(--orange); }
+
+.smart-btn {
+  display: inline-block;
+  padding: 2px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.smart-btn-allow {
+  background: rgba(158, 206, 106, 0.15);
+  color: var(--green);
+  border: 1px solid rgba(158, 206, 106, 0.3);
+}
+.smart-btn-deny {
+  background: rgba(247, 118, 142, 0.15);
+  color: var(--red);
+  border: 1px solid rgba(247, 118, 142, 0.3);
+}
+
+/* ===== FEATURES GRID ===== */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.feature-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--card-accent, var(--blue));
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.feature-card:hover {
+  border-color: var(--border-highlight);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+}
+
+.feature-card:hover::before { opacity: 1; }
+
+.feature-icon {
+  width: 40px; height: 40px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  margin-bottom: 16px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.feature-card h3 {
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+  color: #ffffff;
+}
+
+.feature-card p {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Card accent colors */
+.feature-card:nth-child(1) { --card-accent: var(--blue); }
+.feature-card:nth-child(1) .feature-icon { background: rgba(122,162,247,0.12); color: var(--blue); }
+.feature-card:nth-child(2) { --card-accent: var(--purple); }
+.feature-card:nth-child(2) .feature-icon { background: rgba(187,154,247,0.12); color: var(--purple); }
+.feature-card:nth-child(3) { --card-accent: var(--green); }
+.feature-card:nth-child(3) .feature-icon { background: rgba(158,206,106,0.12); color: var(--green); }
+.feature-card:nth-child(4) { --card-accent: var(--yellow); }
+.feature-card:nth-child(4) .feature-icon { background: rgba(224,175,104,0.12); color: var(--yellow); }
+.feature-card:nth-child(5) { --card-accent: var(--cyan); }
+.feature-card:nth-child(5) .feature-icon { background: rgba(125,207,255,0.12); color: var(--cyan); }
+.feature-card:nth-child(6) { --card-accent: var(--red); }
+.feature-card:nth-child(6) .feature-icon { background: rgba(247,118,142,0.12); color: var(--red); }
+
+/* ===== HOW IT WORKS ===== */
+.steps {
+  display: flex;
+  gap: 0;
+  justify-content: center;
+  position: relative;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.step {
+  flex: 1;
+  text-align: center;
+  padding: 0 24px;
+  position: relative;
+}
+
+.step-number {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  border: 2px solid var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--blue);
+  margin: 0 auto 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 24px;
+  left: calc(50% + 24px);
+  right: calc(-50% + 24px);
+  height: 2px;
+  background: var(--border);
+  z-index: 1;
+}
+
+.step h3 {
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+  color: #ffffff;
+}
+
+.step p {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+/* ===== QUICKSTART ===== */
+.install-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.install-tab {
+  padding: 10px 24px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  font-weight: 600;
+}
+
+.install-tab:hover { color: var(--text); }
+
+.install-tab.active {
+  color: var(--blue);
+  border-bottom-color: var(--blue);
+}
+
+.install-panels { max-width: 640px; margin: 0 auto; }
+
+.install-panel {
+  display: none;
+}
+
+.install-panel.active { display: block; }
+
+.code-block {
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 0 0 var(--radius) var(--radius);
+  overflow: hidden;
+  position: relative;
+}
+
+.code-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: rgba(0,0,0,0.2);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-block-lang {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.code-block-copy {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+.code-block-copy:hover {
+  color: var(--text);
+  background: var(--bg-surface);
+}
+
+.code-block pre {
+  padding: 16px 20px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.code-block .t-comment { color: var(--text-muted); }
+
+/* ===== COMPARISON TABLE ===== */
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 640px;
+}
+
+.comparison-table thead th {
+  padding: 14px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.comparison-table thead th:nth-child(2) {
+  color: var(--blue);
+}
+
+.comparison-table tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.comparison-table tbody tr:nth-child(even) td {
+  background: rgba(30, 32, 48, 0.5);
+}
+
+.comparison-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.comparison-table tbody td:first-child {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.comparison-table tbody td:nth-child(2) {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.check { color: var(--green); }
+.dash { color: var(--text-muted); }
+
+/* ===== ARCHITECTURE ===== */
+.arch-diagram {
+  max-width: 520px;
+  margin: 0 auto 24px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 2;
+  overflow-x: auto;
+}
+
+.arch-note {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  margin-top: 20px;
+}
+
+.arch-note strong {
+  color: var(--yellow);
+  font-family: var(--font-mono);
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 0;
+  text-align: center;
+}
+
+.footer-logo {
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 16px;
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.footer-links a {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  transition: color 0.2s;
+}
+.footer-links a:hover { color: var(--blue); }
+
+.footer-credit {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  section { padding: 60px 0; }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .steps {
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .step:not(:last-child)::after {
+    display: none;
+  }
+
+  .step {
+    padding: 0;
+  }
+
+  .hero { padding: 64px 0 60px; }
+
+  .section-title { font-size: 1.6rem; }
+
+  .comparison-table { font-size: 0.82rem; }
+
+  .terminal-mockup { margin: 0 -8px; border-radius: var(--radius); }
+
+  .install-tab { padding: 10px 16px; font-size: 0.8rem; }
+
+  .arch-diagram { font-size: 0.78rem; padding: 20px; }
+}
+
+@media (max-width: 480px) {
+  .container { padding: 0 16px; }
+  .hero h1 { font-size: 2rem; }
+  .hero-sub { font-size: 0.95rem; }
+  .btn { padding: 10px 20px; font-size: 0.88rem; }
+  .feature-card { padding: 20px; }
+}
+
+/* ===== SELECTION HIGHLIGHT ===== */
+::selection {
+  background: rgba(122, 162, 247, 0.25);
+  color: #ffffff;
+}
+</style>
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="container">
+    <div class="badge">Open Source  |  MIT License</div>
+    <h1>A full terminal <span>in your pocket</span></h1>
+    <p class="hero-sub">Access any server from Telegram. Smart buttons, Claude Code integration, voice input &mdash; no SSH app needed.</p>
+    <div class="cta-group">
+      <a href="https://github.com/teletty/teletty" class="btn btn-primary" target="_blank" rel="noopener">View on GitHub</a>
+      <a href="#quickstart" class="btn btn-secondary">Quick Start</a>
+    </div>
+
+    <div class="terminal-mockup">
+      <div class="terminal-bar">
+        <span class="terminal-dot r"></span>
+        <span class="terminal-dot y"></span>
+        <span class="terminal-dot g"></span>
+        <span class="terminal-title">teletty -- server-prod -- tmux:0</span>
+      </div>
+      <div class="terminal-body">
+<pre><span class="t-prompt">$</span> <span class="t-cmd">claude</span> <span class="t-yellow">"fix the login bug"</span>
+
+<span class="t-dim">  Reading</span> <span class="t-blue">src/auth.js</span><span class="t-dim">...</span>
+<span class="t-dim">  Editing</span> <span class="t-blue">src/auth.js</span><span class="t-dim">...</span>
+
+<span class="t-purple">  Allow Edit tool?</span>
+
+  <span class="t-dim">&gt; Smart buttons detected:</span> <span class="smart-btn smart-btn-allow">Allow</span> <span class="smart-btn smart-btn-deny">Deny</span>
+
+<span class="t-prompt">$</span> <span class="t-cmd">npm test</span>
+<span class="t-green">  PASS</span>  <span class="t-dim">src/auth.test.js</span>
+<span class="t-green">  12 passed</span><span class="t-dim">, 0 failed</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FEATURES ===== -->
+<section>
+  <div class="container">
+    <h2 class="section-title">Everything you need, nothing you don't</h2>
+    <p class="section-subtitle">A purpose-built terminal for mobile. Every feature exists because typing on a phone is painful.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">[ ]</div>
+        <h3>Smart Buttons</h3>
+        <p>Auto-detects interactive prompts (Y/n, Allow/Deny, numbered options) and renders one-tap buttons. No more typing on tiny keyboards.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&gt;_</div>
+        <h3>Claude Code Ready</h3>
+        <p>Built-in support for Claude Code CLI. Approve, deny, or auto-approve AI actions with safety checks for dangerous commands.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">|||</div>
+        <h3>Multi-Tab Sessions</h3>
+        <p>Up to 4 concurrent tmux sessions. Each tab survives disconnects &mdash; pick up where you left off.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">))</div>
+        <h3>Voice Input</h3>
+        <p>Dictate commands with push-to-talk. Browser Speech API with optional Azure Whisper server-side fallback.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">#</div>
+        <h3>Telegram-Native Auth</h3>
+        <p>HMAC-SHA256 verification via Telegram. No passwords, no SSH keys to manage. Whitelist by user ID.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">!</div>
+        <h3>Emergency Access</h3>
+        <p>Management API lets you execute commands via HTTPS when SSH is down. Your lifeline when nothing else works.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section style="background: var(--bg-lighter);">
+  <div class="container">
+    <h2 class="section-title">Three steps to terminal access</h2>
+    <p class="section-subtitle">From Telegram to a running terminal in seconds. No setup on your phone.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3>Open Telegram</h3>
+        <p>Tap the menu button on your teletty bot. The terminal loads instantly as a Mini App.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3>Connect</h3>
+        <p>Telegram authenticates you automatically. No passwords, no keys. If you're whitelisted, you're in.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3>Run anything</h3>
+        <p>Full terminal with tmux persistence. Smart buttons appear for interactive prompts. Voice input for hands-free operation.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== QUICK START ===== -->
+<section id="quickstart">
+  <div class="container">
+    <h2 class="section-title">Up and running in 60 seconds</h2>
+    <p class="section-subtitle">Three ways to deploy. Pick your favorite.</p>
+
+    <div class="install-tabs" role="tablist">
+      <button class="install-tab active" role="tab" data-tab="npm" aria-selected="true">npm</button>
+      <button class="install-tab" role="tab" data-tab="docker" aria-selected="false">Docker</button>
+      <button class="install-tab" role="tab" data-tab="manual" aria-selected="false">Manual</button>
+    </div>
+
+    <div class="install-panels">
+      <div class="install-panel active" data-panel="npm">
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">bash</span>
+            <button class="code-block-copy" onclick="copyCode(this)">copy</button>
+          </div>
+<pre>
+<span class="t-cmd">npx teletty init</span>
+<span class="t-comment"># Edit .env with your BOT_TOKEN and ALLOWED_USER_IDS</span>
+<span class="t-cmd">npx teletty</span></pre>
+        </div>
+      </div>
+
+      <div class="install-panel" data-panel="docker">
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">bash</span>
+            <button class="code-block-copy" onclick="copyCode(this)">copy</button>
+          </div>
+<pre>
+<span class="t-cmd">git clone https://github.com/teletty/teletty</span> <span class="t-dim">&amp;&amp;</span> <span class="t-cmd">cd teletty</span>
+<span class="t-cmd">cp .env.example .env</span> <span class="t-dim">&amp;&amp;</span> <span class="t-cmd">nano .env</span>
+<span class="t-cmd">docker compose up -d</span></pre>
+        </div>
+      </div>
+
+      <div class="install-panel" data-panel="manual">
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">bash</span>
+            <button class="code-block-copy" onclick="copyCode(this)">copy</button>
+          </div>
+<pre>
+<span class="t-cmd">git clone https://github.com/teletty/teletty</span> <span class="t-dim">&amp;&amp;</span> <span class="t-cmd">cd teletty</span>
+<span class="t-cmd">cp .env.example .env</span> <span class="t-dim">&amp;&amp;</span> <span class="t-cmd">nano .env</span>
+<span class="t-cmd">npm install</span> <span class="t-dim">&amp;&amp;</span> <span class="t-cmd">node server.js</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== COMPARISON TABLE ===== -->
+<section style="background: var(--bg-lighter);">
+  <div class="container">
+    <h2 class="section-title">How teletty compares</h2>
+    <p class="section-subtitle">Purpose-built for mobile terminal access.</p>
+
+    <div class="table-wrapper">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>teletty</th>
+            <th>SSH App (Termius)</th>
+            <th>Web Terminal (ttyd)</th>
+            <th>Telegram Bot</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>No install needed</td>
+            <td><span class="check">&#10003;</span></td>
+            <td><span class="dash">&mdash;</span></td>
+            <td><span class="dash">&mdash;</span></td>
+            <td><span class="check">&#10003;</span></td>
+          </tr>
+          <tr>
+            <td>Smart buttons</td>
+            <td><span class="check">&#10003;</span></td>
+            <td><span class="dash">&mdash;</span></td>
+            <td><span class="dash">&mdash;</span></td>
+            <td><span class="dash">&mdash;</span></td>
+          </tr>
+          <tr>
+            <td>AI agent support</td>
+            <td><span class="check">&#10003;</span></td>
+            <td><span class="dash">&mdash;</span></td>
+            <td><span class="dash">&mdash;</span></td>
+            <td><span class="dash">&mdash;</span></td>
+          </tr>
+          <tr>
+            <td>Session persistence</td>
+            <td><span class="check">&#10003;</span></td>
+            <td>Depends</td>
+            <td><span class="dash">&mdash;</span></td>
+            <td><span class="dash">&mdash;</span></td>
+          </tr>
+          <tr>
+            <td>Voice input</td>
+            <td><span class="check">&#10003;</span></td>
+            <td><span class="dash">&mdash;</span></td>
+            <td><span class="dash">&mdash;</span></td>
+            <td><span class="dash">&mdash;</span></td>
+          </tr>
+          <tr>
+            <td>Mobile optimized</td>
+            <td><span class="check">&#10003;</span></td>
+            <td><span class="check">&#10003;</span></td>
+            <td><span class="dash">&mdash;</span></td>
+            <td>Partial</td>
+          </tr>
+          <tr>
+            <td>Free &amp; open source</td>
+            <td><span class="check">&#10003;</span></td>
+            <td>Paid</td>
+            <td><span class="check">&#10003;</span></td>
+            <td>Varies</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== ARCHITECTURE ===== -->
+<section>
+  <div class="container">
+    <h2 class="section-title">Simple by design</h2>
+    <p class="section-subtitle">No build step. No frameworks. Just Node.js and a WebSocket.</p>
+
+    <div class="arch-diagram">
+<pre><span class="t-blue">Telegram</span> <span class="t-dim">(tap Menu Button)</span>
+  <span class="t-dim">-&gt;</span> <span class="t-purple">Mini App WebView</span>
+  <span class="t-dim">-&gt;</span> <span class="t-yellow">POST /auth</span> <span class="t-dim">(HMAC-SHA256)</span>
+  <span class="t-dim">-&gt;</span> <span class="t-green">WebSocket</span> <span class="t-dim">(wss://)</span>
+  <span class="t-dim">-&gt;</span> <span class="t-orange">node-pty</span> <span class="t-dim">-&gt;</span> <span class="t-orange">tmux</span>
+  <span class="t-dim">-&gt;</span> <span class="t-cyan">xterm.js</span> <span class="t-dim">renders output</span>
+  <span class="t-dim">-&gt;</span> <span class="t-red">output-parser</span> <span class="t-dim">-&gt;</span> <span class="t-blue">smart buttons</span></pre>
+    </div>
+    <p class="arch-note"><strong>889</strong> lines of code. <strong>7</strong> files. Zero build step. Zero frameworks.</p>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-logo">teletty</div>
+    <div class="footer-links">
+      <a href="https://github.com/teletty/teletty" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/teletty/teletty#readme" target="_blank" rel="noopener">Docs</a>
+      <a href="https://github.com/teletty/teletty/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
+      <a href="https://github.com/teletty/teletty/blob/main/LICENSE" target="_blank" rel="noopener">License</a>
+    </div>
+    <p class="footer-credit">Made by Oleg Chetrean. Open source under MIT.</p>
+  </div>
+</footer>
+
+<script>
+// Tab switching
+document.querySelectorAll('.install-tab').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    var target = this.getAttribute('data-tab');
+
+    document.querySelectorAll('.install-tab').forEach(function(t) {
+      t.classList.remove('active');
+      t.setAttribute('aria-selected', 'false');
+    });
+    this.classList.add('active');
+    this.setAttribute('aria-selected', 'true');
+
+    document.querySelectorAll('.install-panel').forEach(function(p) {
+      p.classList.remove('active');
+    });
+    document.querySelector('[data-panel="' + target + '"]').classList.add('active');
+  });
+});
+
+// Copy to clipboard
+function copyCode(btn) {
+  var pre = btn.closest('.code-block').querySelector('pre');
+  var text = pre.textContent.trim();
+  navigator.clipboard.writeText(text).then(function() {
+    var original = btn.textContent;
+    btn.textContent = 'copied!';
+    btn.style.color = 'var(--green)';
+    setTimeout(function() {
+      btn.textContent = original;
+      btn.style.color = '';
+    }, 2000);
+  });
+}
+</script>
+
+</body>
+</html>
