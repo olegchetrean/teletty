@@ -139,10 +139,11 @@ Tell me to do these steps manually in Telegram:
 ## Step 7: Verify
 
 Run these checks and report results:
-1. sudo systemctl status teletty teletty-tunnel (both should be "active (running)")
-2. curl http://127.0.0.1:7681/health (should return {"status":"ok","version":"...",...})
-3. curl $URL/health (should return same via HTTPS)
-4. cd /opt/teletty && npm test (all 52 tests should pass)
+1. cd /opt/teletty && node bin/teletty.js doctor (no "problem" rows)
+2. sudo systemctl status teletty teletty-tunnel (both should be "active (running)")
+3. curl http://127.0.0.1:7681/health (should return {"status":"ok","version":"...",...})
+4. curl $URL/health (should return same via HTTPS)
+5. cd /opt/teletty && npm test (all 52 tests should pass)
 
 Tell me: "teletty is ready. Open your bot in Telegram and tap the Terminal button."
 

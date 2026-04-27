@@ -22,6 +22,13 @@ const ALLOWED_USER_IDS = new Set(
 );
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
 
+// Telegram bot tokens look like "123456789:ABCdef…". A wrong format almost
+// always means the user pasted the value with surrounding whitespace, quotes,
+// or copied only part of it. Warn loudly so debugging is fast.
+if (BOT_TOKEN && !/^\d{6,}:[A-Za-z0-9_-]{30,}$/.test(BOT_TOKEN)) {
+  console.warn('[teletty] WARNING: BOT_TOKEN format looks wrong (expected NUMBERS:LETTERS_DIGITS_DASHES). Auth will fail.');
+}
+
 /**
  * Verify a JWT token signed by the bot (RS256).
  * Used when the bot sends a /terminal command with a signed URL.

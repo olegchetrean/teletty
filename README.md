@@ -2,10 +2,12 @@
 
 **A full terminal in your pocket, via Telegram.**
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Node.js >= 20](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org)
+[![ci](https://github.com/olegchetrean/teletty/actions/workflows/ci.yml/badge.svg)](https://github.com/olegchetrean/teletty/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/teletty.svg)](https://www.npmjs.com/package/teletty)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org)
 
-Access any server from your phone using a Telegram Mini App. Smart buttons for interactive prompts, multi-agent CLI integration, voice input, multi-tab tmux sessions — no SSH app needed.
+Access any server from your phone using a Telegram Mini App. Smart buttons for interactive prompts, multi-agent CLI integration (Claude Code, Codex, Gemini, Aider, Copilot, Goose, Crush), voice input, multi-tab tmux sessions — no SSH app needed.
 
 ```
 $ claude "fix the login bug"
@@ -30,33 +32,33 @@ $ claude "fix the login bug"
 
 ## Quick Start (5 minutes, no domain, no DNS)
 
-You need a server (any Linux box you SSH into), Node.js 20+, and tmux.
+You need a Linux/macOS box, Node.js 20+, and tmux. That's it.
 
 ```bash
-# 1) Get a bot token: @BotFather → /newbot → copy the token
-# 2) Get your user ID: @userinfobot → send any message → copy the number
+# 1) Bot token  — open Telegram, message @BotFather → /newbot → copy the token
+# 2) Your id    — message @userinfobot → copy the number it replies with
 
-# 3) Run teletty
-npx teletty init               # creates .env
-nano .env                      # paste BOT_TOKEN + ALLOWED_USER_IDS + SESSION_SECRET
-npx teletty                    # starts the server on 127.0.0.1:7681
+# 3) Set up — interactive, takes ~30 seconds:
+npx teletty init       # asks for the two values above, writes ./.env
+npx teletty            # starts the server on 127.0.0.1:7681
 
-# 4) In a SECOND terminal, expose it via Cloudflare Tunnel (free, instant HTTPS):
-cloudflared tunnel --url http://127.0.0.1:7681
-# → copy the printed https://xxxxx.trycloudflare.com URL
+# 4) In a second terminal, expose it via Cloudflare Tunnel (instant free HTTPS):
+npx teletty tunnel     # prints the public URL with copy-paste BotFather steps
 
-# 5) BotFather → /mybots → your bot → Bot Settings → Menu Button
-#    → URL = the trycloudflare URL, Text = "Terminal"
+# 5) Paste the printed URL into BotFather → /mybots → your bot →
+#    Bot Settings → Menu Button. Button text: Terminal.
 ```
 
-Open your bot in Telegram, tap the Terminal button. Done.
+Open your bot in Telegram, tap the **Terminal** button. Done.
 
-> No domain? Use Cloudflare Tunnel as above (Cloudflare hands you a free HTTPS URL).
-> Already have a domain + nginx + certbot? See [Custom domain](#custom-domain) at the bottom — it's optional.
+If anything is off, run `npx teletty doctor` — it checks Node version, your `.env`, the `BOT_TOKEN` format, ports, tmux, and everything else.
+
+> No domain? Stop here, you're done. Cloudflare Tunnel handed you a free HTTPS URL.
+> Want a stable URL on your own domain? See [Custom domain](#custom-domain-optional) at the bottom — entirely optional.
 
 ### Need help? Let an AI agent do it for you
 
-If you have Claude Code, Codex, Aider, Cursor, Copilot CLI, Gemini CLI, or any other coding agent SSH'd into your server, paste [docs/AGENT-INSTALL-PROMPT.md](docs/AGENT-INSTALL-PROMPT.md) into it. The agent will handle Node.js, tmux, clone, `.env`, Cloudflare Tunnel, and systemd. You only have to provide the bot token and your Telegram user ID.
+If you have Claude Code, Codex, Aider, Cursor, Copilot CLI, Gemini CLI, Goose, Crush, or any other AI coding agent SSH'd into your server, paste [docs/AGENT-INSTALL-PROMPT.md](docs/AGENT-INSTALL-PROMPT.md) into it. The agent will handle everything — Node.js, tmux, clone, `.env`, Cloudflare Tunnel, systemd, verification. You only provide the bot token and your Telegram user id.
 
 ### Docker (instead of npx)
 
@@ -153,14 +155,25 @@ Your teletty instance is **your private terminal**. No one else can access it.
 
 | File | Lines | Purpose |
 |------|------:|---------|
-| `server.js`              | 301 | Express + WebSocket server, auth, voice, management API, agent dispatch |
-| `auth.js`                | 101 | Telegram Mini App HMAC verification, JWT sessions, whitelist |
+| `server.js`              | 312 | Express + WebSocket server, auth, voice, management API, agent dispatch |
+| `auth.js`                | 108 | Telegram Mini App HMAC verification, JWT sessions, whitelist |
 | `terminal-manager.js`    | 111 | tmux session lifecycle, idle timeout, optional audit |
 | `output-parser.js`       | 123 | Multi-agent prompt detection engine + dangerous-command heuristic |
 | `lib/agent-profiles.js`  | 228 | Per-agent regex + button mappings (Claude / Codex / Gemini / Aider / Copilot / Goose / Crush) |
-| `public/app.js`          | 387 | Frontend: xterm.js, tabs, smart buttons, agent indicator, auto-approve, voice |
-| `public/index.html`      |  82 | UI layout, Tokyo Night CSS |
-| `bin/teletty.js`         |  41 | CLI entry point |
+| `public/app.js`          | 393 | Frontend: xterm.js, tabs, smart buttons, agent indicator, auto-approve, voice |
+| `public/index.html`      |  83 | UI layout, Tokyo Night CSS |
+| `bin/teletty.js`         | 310 | CLI: `init` (interactive), `tunnel`, `doctor`, default = start server |
+
+## CLI
+
+| Command                  | What it does                                                   |
+|--------------------------|----------------------------------------------------------------|
+| `teletty init`           | Interactive setup — asks two questions, writes `./.env`        |
+| `teletty`                | Start the server (uses `./.env`)                               |
+| `teletty tunnel`         | Run Cloudflare Tunnel, print public HTTPS URL                  |
+| `teletty doctor`         | Diagnose env, ports, tools, common misconfig                   |
+| `teletty --version`      | Print version                                                  |
+| `teletty --help`         | Full usage                                                     |
 
 ## Testing
 

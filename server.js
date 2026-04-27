@@ -1,6 +1,8 @@
-require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+// When invoked via `teletty` CLI, DOTENV_CONFIG_PATH points to the user's CWD
+// .env file. When invoked directly (`node server.js`), fall back to ./.env.
+require('dotenv').config({ path: process.env.DOTENV_CONFIG_PATH || path.join(process.cwd(), '.env') });
 const express = require('express');
 const http = require('http');
 const { WebSocketServer } = require('ws');
@@ -119,10 +121,16 @@ app.get('/health', (req, res) => {
 // with a valid Mini App launch can produce a valid signature.
 app.post('/auth', authLimiter, (req, res) => {
   const { token, initData } = req.body;
-  if (!initData) return res.status(400).json({ error: 'Missing initData' });
+  if (!initData) return res.status(400).json({
+    error: 'Missing initData',
+    hint: 'Open this URL via the Menu Button of your Telegram bot, not directly in a browser.',
+  });
 
   const tgData = auth.verifyTelegramInitData(initData);
-  if (!tgData) return res.status(401).json({ error: 'Invalid Telegram data' });
+  if (!tgData) return res.status(401).json({
+    error: 'Invalid Telegram data',
+    hint: 'Most likely this server\'s BOT_TOKEN does not match the bot whose Menu Button you tapped. Check .env.',
+  });
 
   if (token) {
     const jwtPayload = auth.verifyBotJWT(token);
@@ -131,7 +139,10 @@ app.post('/auth', authLimiter, (req, res) => {
     }
   }
 
-  if (!auth.isAllowed(tgData.telegramId)) return res.status(403).json({ error: 'Access denied' });
+  if (!auth.isAllowed(tgData.telegramId)) return res.status(403).json({
+    error: 'Access denied',
+    hint: 'Your Telegram user id is not in ALLOWED_USER_IDS. Add it via @userinfobot and restart.',
+  });
 
   const clientIp = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.ip;
   const sessionToken = auth.createSessionToken(String(tgData.telegramId), clientIp);

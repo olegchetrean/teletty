@@ -1,6 +1,6 @@
 {
   "name": "teletty",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A full terminal in your pocket, via Telegram. Multi-agent smart buttons (Claude Code, Codex, Gemini, Aider, Copilot, Goose, Crush), voice input, multi-tab.",
   "main": "server.js",
   "bin": {

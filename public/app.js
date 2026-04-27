@@ -44,7 +44,7 @@
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        showAuthError(err.error || `Authentication error (${resp.status})`);
+        showAuthError(err.error || `Authentication error (${resp.status})`, err.hint);
         return false;
       }
       const data = await resp.json();
@@ -57,13 +57,19 @@
     }
   }
 
-  function showAuthError(msg) {
+  function showAuthError(msg, hint) {
     const overlay = document.getElementById('authOverlay');
     overlay.textContent = '';
     const div = document.createElement('div');
     div.className = 'auth-error';
     div.textContent = msg;
     overlay.appendChild(div);
+    if (hint) {
+      const h = document.createElement('div');
+      h.className = 'auth-hint';
+      h.textContent = hint;
+      overlay.appendChild(h);
+    }
   }
 
   function showBrowserFallback() {
