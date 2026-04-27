@@ -4,13 +4,15 @@ services:
     container_name: teletty
     restart: unless-stopped
     ports:
-      - "7681:7681"
+      - "127.0.0.1:7681:7681"
     env_file:
       - .env
-    volumes:
-      - terminal-logs:/var/log/terminal-sessions
     environment:
       - NODE_ENV=production
+    # Opt in to audit logging by setting AUDIT_LOG_DIR=/var/log/teletty in .env
+    # and uncommenting the volume below.
+    # volumes:
+    #   - terminal-logs:/var/log/teletty
 
-volumes:
-  terminal-logs:
+# volumes:
+#   terminal-logs:
