@@ -40,18 +40,21 @@ function createSession(userId, tabId) {
     },
   });
 
-  // Enable audit logging via tmux pipe-pane (optional, fails silently)
-  setTimeout(() => {
-    try {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const logDir = '/var/log/terminal-sessions';
-      execSync(`mkdir -p ${logDir} 2>/dev/null`, { timeout: 2000 });
-      const logFile = `${logDir}/${userId}-${timestamp}.log`;
-      execSync(`tmux pipe-pane -t "${tmuxSession}" -o 'cat >> ${logFile}'`, { timeout: 5000 });
-    } catch {
-      // Audit logging is optional — don't fail if tmux pipe-pane doesn't work
-    }
-  }, 1000);
+  // Optional audit logging via tmux pipe-pane.
+  // Disabled by default — set AUDIT_LOG_DIR to opt in. The directory must
+  // already exist and be writable by the teletty user.
+  const auditDir = process.env.AUDIT_LOG_DIR;
+  if (auditDir) {
+    setTimeout(() => {
+      try {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const logFile = `${auditDir.replace(/'/g, '')}/${userId}-${tabId}-${timestamp}.log`;
+        execSync(`tmux pipe-pane -t '${tmuxSession}' -o 'cat >> ${logFile}'`, { timeout: 5000 });
+      } catch (e) {
+        console.warn(`[terminal-manager] Audit log setup failed: ${e.message}`);
+      }
+    }, 1000);
+  }
 
   const session = { pty: shell, userId, tabId, tmuxSession, lastActivity: Date.now(), idleTimer: null };
   resetIdleTimer(session, key);

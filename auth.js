@@ -12,7 +12,11 @@ try {
   // No public key — bot command JWT verification disabled
 }
 
-const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+// SESSION_SECRET is required for stable sessions across restarts.
+// In production server.js refuses to start without it; in dev we fall back to
+// a random secret and warn so you know why your token stopped working.
+const SESSION_SECRET = process.env.SESSION_SECRET ||
+  (process.env.NODE_ENV === 'production' ? '' : crypto.randomBytes(32).toString('hex'));
 const ALLOWED_USER_IDS = new Set(
   (process.env.ALLOWED_USER_IDS || '').split(',').map(id => id.trim()).filter(Boolean)
 );
@@ -88,4 +92,10 @@ function isAllowed(telegramId) {
   return ALLOWED_USER_IDS.has(String(telegramId));
 }
 
-module.exports = { verifyBotJWT, verifyTelegramInitData, createSessionToken, verifySessionToken, isAllowed };
+module.exports = {
+  verifyBotJWT,
+  verifyTelegramInitData,
+  createSessionToken,
+  verifySessionToken,
+  isAllowed,
+};

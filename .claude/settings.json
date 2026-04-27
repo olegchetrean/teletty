@@ -1,17 +1,26 @@
 {
   "permissions": {
     "allow": [
+      "Bash(npm install)",
+      "Bash(npm install --omit=dev)",
+      "Bash(npm test)",
       "Bash(npm run *)",
-      "Bash(npm test *)",
       "Bash(node server.js)",
       "Bash(node --test *)",
       "Bash(npx teletty *)",
-      "Bash(git *)",
-      "Bash(curl http://localhost:*)"
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(curl http://127.0.0.1:*)"
     ],
     "deny": [
       "Bash(rm -rf /)",
-      "Bash(sudo rm *)"
+      "Bash(rm -rf /*)",
+      "Bash(sudo rm *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)"
     ]
   }
 }

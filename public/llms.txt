@@ -1,35 +1,42 @@
 # teletty
 
-> A full terminal in your pocket, via Telegram. Open source Telegram Mini App with smart buttons, Claude Code integration, voice input, and multi-tab tmux sessions.
+> A full terminal in your pocket, via Telegram. Open source Telegram Mini App with multi-agent smart buttons, voice input, and multi-tab tmux sessions.
 
 ## What is teletty?
 
-teletty is an open-source Telegram Mini App that gives you full terminal access to any server from your phone. It connects via WebSocket to a Node.js server running tmux, rendering a real terminal in your browser via xterm.js. The killer feature is smart buttons: teletty detects interactive prompts (Y/n, Allow/Deny, numbered options) and renders one-tap buttons, eliminating the need to type on a phone keyboard.
+teletty is an open-source Telegram Mini App that gives you full terminal access to any server from your phone. It connects via WebSocket to a Node.js server running tmux, rendering a real terminal in your browser via xterm.js. The killer feature is smart buttons: teletty detects interactive prompts from popular AI coding CLIs (Claude Code, OpenAI Codex CLI, Gemini CLI, Aider, GitHub Copilot CLI, Goose, Crush) plus generic shell prompts (Y/n, Allow/Deny, numbered options) and renders one-tap buttons, eliminating the need to type on a phone keyboard.
 
 ## Key Features
 
-- Smart Buttons: Auto-detects 7 types of interactive prompts and renders clickable buttons
-- Claude Code Integration: Built-in support for Claude Code CLI approve/deny prompts with auto-approve mode
+- Multi-agent Smart Buttons: Auto-detects prompts from Claude Code, Codex, Gemini, Aider, Copilot, Goose, Crush
+- Per-agent send strategy: knows which CLIs need digit + Enter vs single keystroke vs just Enter
+- Auto-approve mode: skips safe prompts, blocks dangerous ones (rm -rf, force-push, chmod 777, curl|sh, fork bombs, SQL DROP/DELETE/TRUNCATE)
 - Multi-Tab Sessions: Up to 4 concurrent tmux sessions that survive disconnects
 - Voice Input: Push-to-talk via Web Speech API with Azure Whisper fallback
 - Telegram-Native Auth: HMAC-SHA256 verification, user ID whitelist, IP-bound JWT sessions
-- Emergency Management API: Execute commands via HTTPS when SSH is down
+- Emergency Management API: Execute commands via HTTPS when SSH is down (rate-limited, audit-logged)
 - Mobile Controls: Buttons for arrow keys, Tab, Esc, Ctrl+C
 - Tokyo Night Theme: Dark theme optimized for mobile screens
 
 ## Technical Details
 
-- Stack: Node.js 18+, Express, ws (WebSocket), node-pty, xterm.js 5.5.0, tmux
-- Total codebase: 889 lines across 7 files
+- Stack: Node.js 20+, Express, ws (WebSocket), node-pty, xterm.js 5.5.0, tmux
+- Codebase: ~1370 lines across 8 source files
 - Zero frameworks, zero build step, zero transpilation
-- Security: Telegram HMAC-SHA256, timing-safe comparisons, sanitized PTY env, CSP headers, rate limiting
-- Deployment: npm, Docker, or manual. Supports Caddy/nginx for HTTPS.
+- Security: Telegram HMAC-SHA256, timing-safe comparisons, sanitized PTY env, CSP headers, rate limiting (10 auth/min, 20 /api/exec/min, 256 KB WS frames)
+- Deployment: npm, Docker (non-root, tini-supervised), or manual. Supports Caddy, nginx, Cloudflare Tunnel.
+- Production fail-fast: refuses to start without BOT_TOKEN, SESSION_SECRET, ALLOWED_USER_IDS
 
-## Installation
+## Installation (5 minutes, no domain required)
 
-npm: npx teletty init && npx teletty
-Docker: docker compose up -d
-Manual: git clone, npm install, node server.js
+1. Get bot token from @BotFather, get user ID from @userinfobot
+2. `npx teletty init && nano .env && npx teletty`
+3. In a second terminal: `cloudflared tunnel --url http://127.0.0.1:7681`
+4. Paste the trycloudflare URL into BotFather → Menu Button
+
+Or paste `docs/AGENT-INSTALL-PROMPT.md` to any AI coding agent (Claude Code / Codex / Aider / Copilot / Cursor / Gemini / Goose / Crush) SSH'd into the server — it does the whole setup including systemd + Cloudflare Tunnel.
+
+For a custom domain (optional): use the included `nginx.conf.template` + certbot.
 
 ## Links
 

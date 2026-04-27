@@ -9,6 +9,17 @@
     autoApproveTimer: null,
     autoApproveState: 'off',
     voiceRecording: false,
+    agentByTab: {},
+  };
+
+  const AGENT_LABELS = {
+    'claude-code': 'Claude Code',
+    'codex': 'Codex',
+    'gemini': 'Gemini',
+    'aider': 'Aider',
+    'copilot': 'Copilot',
+    'goose': 'Goose',
+    'crush': 'Crush',
   };
 
   const AUTO_APPROVE_TIMEOUT = 10 * 60 * 1000;
@@ -131,6 +142,7 @@
         const msg = JSON.parse(event.data);
         if (msg.type === 'output') terminal.write(msg.data);
         if (msg.type === 'prompt') handlePrompt(msg, tabId);
+        if (msg.type === 'agent') handleAgent(msg.id, tabId);
         if (msg.type === 'error') terminal.write(`\r\n\x1b[31mError: ${msg.message}\x1b[0m\r\n`);
       } catch {}
     };
@@ -153,23 +165,46 @@
     return ws;
   }
 
+  function payloadFor(item, send) {
+    if (send === 'enter') return '\n';
+    if (send === 'key') return item.key;
+    return (item.key || '') + '\n';
+  }
+
   function handlePrompt(prompt, tabId) {
     const container = document.getElementById('smartButtons');
-    if (state.autoApproveState === 'active' && !prompt.dangerous) {
-      if (prompt.type === 'confirm' || prompt.type === 'permission') {
-        sendInput(tabId, (prompt.items[0]?.key || 'Y') + '\n');
-        return;
-      }
+    const send = prompt.send || 'key+enter';
+    if (state.autoApproveState === 'active' && !prompt.dangerous &&
+        (prompt.type === 'confirm' || prompt.type === 'permission')) {
+      const first = prompt.items[0];
+      if (first) { sendInput(tabId, payloadFor(first, send)); return; }
     }
     container.innerHTML = '';
     prompt.items.forEach((item) => {
       const btn = document.createElement('button');
       btn.className = 'smart-btn' + (prompt.dangerous ? ' danger' : '');
       btn.textContent = item.label || item.key;
-      btn.addEventListener('click', () => { sendInput(tabId, item.key + '\n'); container.classList.remove('visible'); });
+      btn.addEventListener('click', () => {
+        sendInput(tabId, payloadFor(item, send));
+        container.classList.remove('visible');
+      });
       container.appendChild(btn);
     });
     container.classList.add('visible');
+  }
+
+  function handleAgent(agentId, tabId) {
+    state.agentByTab[tabId] = agentId;
+    if (tabId !== state.activeTab) return;
+    const indicator = document.getElementById('agentIndicator');
+    if (!indicator) return;
+    const label = AGENT_LABELS[agentId];
+    if (label) {
+      indicator.textContent = label;
+      indicator.classList.add('visible');
+    } else {
+      indicator.classList.remove('visible');
+    }
   }
 
   function sendInput(tabId, data) {
@@ -184,6 +219,7 @@
     state.tabs[tabId]?.fitAddon?.fit();
     state.tabs[tabId]?.terminal?.focus();
     document.getElementById('smartButtons').classList.remove('visible');
+    handleAgent(state.agentByTab[tabId] || null, tabId);
   }
 
   function addTab() {
@@ -333,7 +369,6 @@
     if (!ok) return;
     document.getElementById('authOverlay').classList.add('hidden');
 
-    // Fetch server config
     try {
       const cfgResp = await fetch('/config');
       if (cfgResp.ok) {

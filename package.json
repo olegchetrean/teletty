@@ -1,7 +1,7 @@
 {
   "name": "teletty",
-  "version": "1.0.0",
-  "description": "A full terminal in your pocket, via Telegram. Smart buttons, Claude Code integration, voice input, multi-tab.",
+  "version": "1.1.0",
+  "description": "A full terminal in your pocket, via Telegram. Multi-agent smart buttons (Claude Code, Codex, Gemini, Aider, Copilot, Goose, Crush), voice input, multi-tab.",
   "main": "server.js",
   "bin": {
     "teletty": "./bin/teletty.js"
@@ -13,7 +13,8 @@
   },
   "keywords": [
     "telegram", "mini-app", "terminal", "web-terminal", "xterm",
-    "claude-code", "remote-shell", "tmux", "ssh", "teletty",
+    "claude-code", "codex-cli", "gemini-cli", "aider", "copilot-cli",
+    "remote-shell", "tmux", "ssh", "teletty",
     "smart-buttons", "voice-terminal", "mobile-terminal"
   ],
   "author": "Oleg Chetrean",
@@ -24,14 +25,13 @@
   },
   "homepage": "https://teletty.dev",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "form-data": "^4.0.1",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.1",
+    "multer": "^2.0.0",
     "node-pty": "^1.0.0",
     "ws": "^8.18.0"
   }
