@@ -37,11 +37,16 @@ async function ask(prompt, { mask = false, validate = null } = {}) {
           process.stdout.write('\n');
           rl.close();
           resolve(answer.trim());
-        } else if (s === '') { // Ctrl+C
-          process.exit(1);
-        } else if (s === '' || s === '\b') { // backspace
+        } else if (s === '\x03') { // Ctrl+C
+          process.stdin.removeListener('data', onData);
+          process.stdin.setRawMode(false);
+          process.stdin.pause();
+          process.stdout.write('\n');
+          rl.close();
+          process.exit(130);
+        } else if (s === '\x7f' || s === '\b') { // backspace / delete
           if (answer.length) { answer = answer.slice(0, -1); process.stdout.write('\b \b'); }
-        } else {
+        } else if (s.charCodeAt(0) >= 32) { // printable only
           answer += s;
           process.stdout.write('*');
         }

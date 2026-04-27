@@ -32,6 +32,23 @@ if (NODE_ENV === 'production') {
   if (!process.env.ALLOWED_USER_IDS) console.warn('[teletty] WARNING: ALLOWED_USER_IDS empty — no users will be authorized');
 }
 
+// Resolve the client's real IP. The first proxy/tunnel header that is set
+// wins. Order matters: cf-connecting-ip is what Cloudflare Tunnel and
+// Cloudflare's CDN set, true-client-ip is Akamai/Cloudflare Enterprise,
+// x-real-ip is the nginx convention, x-forwarded-for is the generic header
+// (we take only the leftmost entry — the original client). Falls back to the
+// raw socket address when nothing is set, which means a server exposed
+// directly to the internet without a reverse proxy still works.
+function clientIpFrom(req) {
+  const h = req.headers || {};
+  const cf = h['cf-connecting-ip'] || h['true-client-ip'];
+  if (cf) return String(cf).trim();
+  if (h['x-real-ip']) return String(h['x-real-ip']).trim();
+  const xff = h['x-forwarded-for'];
+  if (xff) return String(xff).split(',')[0].trim();
+  return (req.socket && req.socket.remoteAddress) || req.ip || 'unknown';
+}
+
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -46,7 +63,7 @@ function makeRateLimiter(max, windowMs) {
   const t = setInterval(() => buckets.clear(), windowMs);
   if (t.unref) t.unref();
   return function (req, res, next) {
-    const ip = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.ip;
+    const ip = clientIpFrom(req);
     const count = (buckets.get(ip) || 0) + 1;
     buckets.set(ip, count);
     if (count > max) return res.status(429).json({ error: 'Too many attempts' });
@@ -79,7 +96,7 @@ if (MGMT_TOKEN) {
     const { command, timeout } = req.body || {};
     if (!command || typeof command !== 'string') return res.status(400).json({ error: 'Missing command' });
 
-    const ip = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.ip;
+    const ip = clientIpFrom(req);
     if (MGMT_AUDIT_LOG) {
       try {
         fs.appendFileSync(MGMT_AUDIT_LOG,
@@ -144,7 +161,7 @@ app.post('/auth', authLimiter, (req, res) => {
     hint: 'Your Telegram user id is not in ALLOWED_USER_IDS. Add it via @userinfobot and restart.',
   });
 
-  const clientIp = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.ip;
+  const clientIp = clientIpFrom(req);
   const sessionToken = auth.createSessionToken(String(tgData.telegramId), clientIp);
   res.json({ sessionToken });
 });
@@ -160,7 +177,7 @@ const VOICE_LANGUAGE = process.env.VOICE_LANGUAGE || 'en';
 if (AZURE_OPENAI_ENDPOINT && AZURE_OPENAI_KEY) {
   app.post('/voice/transcribe', upload.single('audio'), async (req, res) => {
     const sessionToken = req.headers['x-session-token'];
-    const clientIp = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.ip;
+    const clientIp = clientIpFrom(req);
     if (!sessionToken || !auth.verifySessionToken(sessionToken, clientIp)) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -226,7 +243,7 @@ server.on('upgrade', (request, socket, head) => {
   const reqUrl = new URL(request.url, 'http://localhost');
   const sessionParam = reqUrl.searchParams.get('session') || '';
   const tabParam = reqUrl.searchParams.get('tab') || 'main';
-  const clientIp = request.headers['x-real-ip'] || request.headers['x-forwarded-for'] || request.socket.remoteAddress;
+  const clientIp = clientIpFrom({ headers: request.headers, socket: request.socket });
   const payload = auth.verifySessionToken(sessionParam, clientIp);
 
   if (!payload) {

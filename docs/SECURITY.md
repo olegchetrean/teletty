@@ -105,6 +105,13 @@ These are NOT hypothetical attacks; they are real trade-offs you should know:
    plaintext terminal traffic. Auth is unaffected (HMAC verifies at origin),
    but the content is visible to Cloudflare. nginx + your own domain is the
    privacy-preserving option.
+   - Cloudflare Tunnel forwards the client's real IP via the `CF-Connecting-IP`
+     header. Since v1.2.0 teletty trusts that header (alongside `True-Client-IP`,
+     `X-Real-IP`, and `X-Forwarded-For`) so JWT IP-binding works correctly
+     behind the tunnel. If you put a custom proxy in front and that proxy does
+     NOT pass one of these headers, every connection looks like 127.0.0.1 to
+     teletty and IP-binding effectively becomes "any IP can use any token".
+     Always make sure your reverse proxy forwards the original client IP.
 6. **`ALLOWED_USER_IDS` is multi-id but not multi-tenant.** Listing several
    Telegram IDs gives them isolated tmux sessions but the SAME OS user. They
    can read each other's files.
