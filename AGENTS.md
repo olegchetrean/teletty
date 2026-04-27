@@ -56,12 +56,12 @@ npm test
    }
    ```
 2. Add fixture-style tests in `test/output-parser.test.js`. The fixtures should be realistic: include the agent banner / prompt as it actually appears in a terminal, plus an `it('returns null for unrelated output')` negative case.
-3. `npm test` — must keep the suite green (currently 40 tests).
+3. `npm test` — must keep the suite green (currently 52 tests).
 4. Update the supported-agent table in `README.md`.
 
 ## Verification before claiming done
 
-- `npm test` — all 40 tests must pass.
+- `npm test` — all 52 tests must pass.
 - `BOT_TOKEN=test ALLOWED_USER_IDS=1 SESSION_SECRET=$(openssl rand -hex 32) PORT=17681 node server.js` then `curl localhost:17681/health` returns `{"status":"ok",...}`.
 - For frontend changes: visually verify the agent indicator pill in the status bar lights up when running the agent in question. The fallback page (when opened outside Telegram) must still load.
 

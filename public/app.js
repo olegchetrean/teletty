@@ -30,83 +30,31 @@
     const params = new URLSearchParams(location.search);
     const token = params.get('token');
     const tg = window.Telegram?.WebApp;
-
-    // Path A: inside Telegram Mini App
-    if (tg?.initData) {
-      try {
-        const body = { initData: tg.initData };
-        if (token) body.token = token;
-        const resp = await fetch('/auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({}));
-          showAuthError(err.error || `Authentication error (${resp.status})`);
-          return false;
-        }
-        const data = await resp.json();
-        state.sessionToken = data.sessionToken;
-        history.replaceState(null, '', location.pathname);
-        return true;
-      } catch (e) {
-        showAuthError('Server connection error');
+    if (!tg?.initData) {
+      showBrowserFallback();
+      return false;
+    }
+    try {
+      const body = { initData: tg.initData };
+      if (token) body.token = token;
+      const resp = await fetch('/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        showAuthError(err.error || `Authentication error (${resp.status})`);
         return false;
       }
+      const data = await resp.json();
+      state.sessionToken = data.sessionToken;
+      history.replaceState(null, '', location.pathname);
+      return true;
+    } catch (e) {
+      showAuthError('Server connection error');
+      return false;
     }
-
-    // Path B: outside Telegram → check if Login Widget is enabled
-    let cfg = {};
-    try { cfg = await fetch('/auth/config').then((r) => r.json()); } catch {}
-    if (cfg.loginWidgetBot) {
-      window.onTelegramAuth = async (user) => {
-        try {
-          const resp = await fetch('/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(user),
-          });
-          if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            showAuthError(err.error || `Login error (${resp.status})`);
-            return;
-          }
-          const data = await resp.json();
-          state.sessionToken = data.sessionToken;
-          document.getElementById('authOverlay').classList.add('hidden');
-          continueInit();
-        } catch {
-          showAuthError('Server connection error');
-        }
-      };
-      showLoginWidget(cfg.loginWidgetBot);
-      return false; // init flow continues asynchronously via onTelegramAuth
-    }
-
-    showBrowserFallback();
-    return false;
-  }
-
-  function showLoginWidget(botUsername) {
-    const overlay = document.getElementById('authOverlay');
-    overlay.innerHTML = '';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#1a1b26;display:flex;align-items:center;justify-content:center;z-index:100;flex-direction:column;gap:24px;padding:40px;font-family:-apple-system,sans-serif;';
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:18px;';
-    wrap.innerHTML = [
-      '<div style="font-size:48px;font-weight:800;color:#fff;letter-spacing:-1px;">teletty</div>',
-      '<div style="color:#a0a0a0;font-size:14px;text-align:center;max-width:360px;">Sign in with the Telegram account that is whitelisted on this server.</div>',
-    ].join('');
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = 'https://telegram.org/js/telegram-widget.js?22';
-    script.setAttribute('data-telegram-login', botUsername);
-    script.setAttribute('data-size', 'large');
-    script.setAttribute('data-onauth', 'onTelegramAuth(user)');
-    script.setAttribute('data-request-access', 'write');
-    wrap.appendChild(script);
-    overlay.appendChild(wrap);
   }
 
   function showAuthError(msg) {
@@ -409,22 +357,6 @@
     document.getElementById('statusText').textContent = connected ? 'Connected' : 'Disconnected...';
   }
 
-  async function continueInit() {
-    document.getElementById('authOverlay').classList.add('hidden');
-    try {
-      const cfgResp = await fetch('/config');
-      if (cfgResp.ok) {
-        const cfg = await cfgResp.json();
-        state.voiceLanguage = cfg.voiceLanguage || 'en';
-      }
-    } catch {}
-    createTerminal('main');
-    setupControls();
-    setupVoice();
-    const tg = window.Telegram?.WebApp;
-    document.getElementById('terminalContainer').addEventListener('click', () => tg?.expand(), { once: true });
-  }
-
   async function init() {
     const tg = window.Telegram?.WebApp;
     if (tg) {
@@ -434,8 +366,21 @@
       if (tg.colorScheme === 'light') document.body.classList.add('light');
     }
     const ok = await authenticate();
-    if (!ok) return;            // showLoginWidget / fallback already rendered
-    await continueInit();
+    if (!ok) return;
+    document.getElementById('authOverlay').classList.add('hidden');
+
+    try {
+      const cfgResp = await fetch('/config');
+      if (cfgResp.ok) {
+        const cfg = await cfgResp.json();
+        state.voiceLanguage = cfg.voiceLanguage || 'en';
+      }
+    } catch {}
+
+    createTerminal('main');
+    setupControls();
+    setupVoice();
+    document.getElementById('terminalContainer').addEventListener('click', () => tg?.expand(), { once: true });
   }
 
   init();

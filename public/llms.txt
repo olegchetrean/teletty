@@ -21,17 +21,22 @@ teletty is an open-source Telegram Mini App that gives you full terminal access 
 ## Technical Details
 
 - Stack: Node.js 20+, Express, ws (WebSocket), node-pty, xterm.js 5.5.0, tmux
-- Codebase: ~1350 lines across 8 source files
+- Codebase: ~1370 lines across 8 source files
 - Zero frameworks, zero build step, zero transpilation
 - Security: Telegram HMAC-SHA256, timing-safe comparisons, sanitized PTY env, CSP headers, rate limiting (10 auth/min, 20 /api/exec/min, 256 KB WS frames)
 - Deployment: npm, Docker (non-root, tini-supervised), or manual. Supports Caddy, nginx, Cloudflare Tunnel.
 - Production fail-fast: refuses to start without BOT_TOKEN, SESSION_SECRET, ALLOWED_USER_IDS
 
-## Installation
+## Installation (5 minutes, no domain required)
 
-- npm: `npx teletty init && npx teletty`
-- Docker: `docker compose up -d`
-- AI agent install: paste `docs/AGENT-INSTALL-PROMPT.md` to Claude Code / Codex / Aider / Copilot / Cursor / Gemini / Goose / Crush
+1. Get bot token from @BotFather, get user ID from @userinfobot
+2. `npx teletty init && nano .env && npx teletty`
+3. In a second terminal: `cloudflared tunnel --url http://127.0.0.1:7681`
+4. Paste the trycloudflare URL into BotFather → Menu Button
+
+Or paste `docs/AGENT-INSTALL-PROMPT.md` to any AI coding agent (Claude Code / Codex / Aider / Copilot / Cursor / Gemini / Goose / Crush) SSH'd into the server — it does the whole setup including systemd + Cloudflare Tunnel.
+
+For a custom domain (optional): use the included `nginx.conf.template` + certbot.
 
 ## Links
 

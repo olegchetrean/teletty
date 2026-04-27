@@ -28,56 +28,44 @@ $ claude "fix the login bug"
 - **Tokyo Night theme** — dark theme, optimized for mobile screens
 - **Zero frameworks, zero build step** — plain JS + xterm.js
 
-## Quick Start
+## Quick Start (5 minutes, no domain, no DNS)
 
-### npx (fastest)
+You need a server (any Linux box you SSH into), Node.js 20+, and tmux.
 
 ```bash
-npx teletty init    # creates .env from template
-nano .env           # set BOT_TOKEN, ALLOWED_USER_IDS, SESSION_SECRET
-npx teletty
+# 1) Get a bot token: @BotFather → /newbot → copy the token
+# 2) Get your user ID: @userinfobot → send any message → copy the number
+
+# 3) Run teletty
+npx teletty init               # creates .env
+nano .env                      # paste BOT_TOKEN + ALLOWED_USER_IDS + SESSION_SECRET
+npx teletty                    # starts the server on 127.0.0.1:7681
+
+# 4) In a SECOND terminal, expose it via Cloudflare Tunnel (free, instant HTTPS):
+cloudflared tunnel --url http://127.0.0.1:7681
+# → copy the printed https://xxxxx.trycloudflare.com URL
+
+# 5) BotFather → /mybots → your bot → Bot Settings → Menu Button
+#    → URL = the trycloudflare URL, Text = "Terminal"
 ```
 
-### Docker
+Open your bot in Telegram, tap the Terminal button. Done.
+
+> No domain? Use Cloudflare Tunnel as above (Cloudflare hands you a free HTTPS URL).
+> Already have a domain + nginx + certbot? See [Custom domain](#custom-domain) at the bottom — it's optional.
+
+### Need help? Let an AI agent do it for you
+
+If you have Claude Code, Codex, Aider, Cursor, Copilot CLI, Gemini CLI, or any other coding agent SSH'd into your server, paste [docs/AGENT-INSTALL-PROMPT.md](docs/AGENT-INSTALL-PROMPT.md) into it. The agent will handle Node.js, tmux, clone, `.env`, Cloudflare Tunnel, and systemd. You only have to provide the bot token and your Telegram user ID.
+
+### Docker (instead of npx)
 
 ```bash
 git clone https://github.com/olegchetrean/teletty.git && cd teletty
 cp .env.example .env && nano .env
 docker compose up -d
+# Then expose the container with cloudflared as in step 4 above.
 ```
-
-### Manual
-
-```bash
-git clone https://github.com/olegchetrean/teletty.git && cd teletty
-cp .env.example .env && nano .env
-npm install
-NODE_ENV=production node server.js
-```
-
-### AI Agent Install (recommended)
-
-Have Claude Code, Codex, Cursor, Aider, Copilot CLI, or any AI coding agent connected to your server? Just give it [this prompt](docs/AGENT-INSTALL-PROMPT.md) — it handles everything: Node.js, tmux, clone, .env, HTTPS, systemd. You only need to create a bot at @BotFather and provide the token.
-
-### Set up HTTPS (required by Telegram)
-
-```bash
-cp nginx.conf.template /etc/nginx/sites-enabled/teletty.conf
-# Edit server_name, then:
-sudo nginx -t && sudo nginx -s reload
-sudo certbot --nginx -d terminal.yourdomain.com
-```
-
-### Configure your Telegram bot
-
-1. Open [@BotFather](https://t.me/BotFather)
-2. `/mybots` > your bot > Bot Settings > Menu Button
-3. Set URL: `https://terminal.yourdomain.com/`
-4. Set text: `Terminal`
-
-### Find your Telegram user ID
-
-Send any message to your bot, then check logs for `[ws] Connected: user=XXXXXXX`. Add that ID to `ALLOWED_USER_IDS` in `.env`.
 
 ## How It Works
 
@@ -145,15 +133,7 @@ In `NODE_ENV=production` the server refuses to start if any of these are missing
 
 ## Authentication
 
-Two paths, same trust model. See [docs/SECURITY.md](docs/SECURITY.md) for the full chain-of-trust write-up and rotation runbook.
-
-| Path | When | Endpoint |
-|------|------|----------|
-| **Mini App initData** (default) | You open the bot's Menu Button inside Telegram | `POST /auth` |
-| **Login Widget** (optional) | You open `https://terminal.yourdomain.com/` in a desktop browser, no Telegram app | `POST /auth/login` (enabled by setting `LOGIN_WIDGET_BOT=yourbot_username` and `/setdomain` in BotFather) |
-
-Both paths verify a Telegram-signed payload using `BOT_TOKEN`, then check the
-user id against `ALLOWED_USER_IDS`, then issue an IP-bound JWT (4 h).
+teletty uses Telegram's Mini App `initData` — the WebApp launches inside Telegram (phone or Telegram Desktop), Telegram signs your `user.id` with your `BOT_TOKEN`, the server verifies the signature and checks `ALLOWED_USER_IDS`, then issues an IP-bound JWT for 4 hours. No username/password, no third-party OAuth, no shared services. See [docs/SECURITY.md](docs/SECURITY.md) for the full chain-of-trust write-up and credential-rotation runbook.
 
 ## Security — 7 Layers
 
@@ -173,12 +153,12 @@ Your teletty instance is **your private terminal**. No one else can access it.
 
 | File | Lines | Purpose |
 |------|------:|---------|
-| `server.js`              | 298 | Express + WebSocket server, auth, voice, management API, agent dispatch |
-| `auth.js`                |  95 | Telegram HMAC verification, JWT sessions, whitelist |
+| `server.js`              | 301 | Express + WebSocket server, auth, voice, management API, agent dispatch |
+| `auth.js`                | 101 | Telegram Mini App HMAC verification, JWT sessions, whitelist |
 | `terminal-manager.js`    | 111 | tmux session lifecycle, idle timeout, optional audit |
-| `output-parser.js`       | 110 | Multi-agent prompt detection engine |
+| `output-parser.js`       | 123 | Multi-agent prompt detection engine + dangerous-command heuristic |
 | `lib/agent-profiles.js`  | 228 | Per-agent regex + button mappings (Claude / Codex / Gemini / Aider / Copilot / Goose / Crush) |
-| `public/app.js`          | 388 | Frontend: xterm.js, tabs, smart buttons, agent indicator, auto-approve, voice |
+| `public/app.js`          | 387 | Frontend: xterm.js, tabs, smart buttons, agent indicator, auto-approve, voice |
 | `public/index.html`      |  82 | UI layout, Tokyo Night CSS |
 | `bin/teletty.js`         |  41 | CLI entry point |
 
@@ -188,7 +168,7 @@ Your teletty instance is **your private terminal**. No one else can access it.
 npm test
 ```
 
-40 tests covering: ANSI stripping, generic prompts, every agent profile (positive + negative), danger flag (rm -rf, force-push, chmod 777, curl|sh), `detectAgent`, `activeAgent` priority, and HMAC/JWT auth.
+52 tests covering: ANSI stripping, generic prompts, every agent profile (positive + negative), danger flag (covers `rm -rf` / `-fr` / `-Rf` / `--recursive --force`, `find -delete`, `git push -f`/`--force`, `chmod 777`, `curl|sh`, `dd if=`, `shutdown`, fork bomb, `sudo rm`, plus negative cases), `detectAgent`, `activeAgent` priority, and HMAC/JWT auth.
 
 ## Use Cases
 
@@ -200,6 +180,23 @@ npm test
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+
+## Custom domain (optional)
+
+Cloudflare Tunnel is the recommended path because it's instant, free, and needs no DNS. If you already have a domain and want full control / privacy (Cloudflare sees your terminal traffic in the tunnel option), use the included nginx template:
+
+```bash
+# DNS: point an A record (e.g. terminal.example.com) at your server IP, then:
+cp nginx.conf.template /etc/nginx/sites-enabled/teletty.conf
+# edit server_name to match your DNS, then:
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d terminal.example.com
+
+# In .env, set:
+ALLOWED_ORIGINS=https://terminal.example.com
+```
+
+Use this URL in BotFather's Menu Button instead of the trycloudflare URL.
 
 ## License
 

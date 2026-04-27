@@ -19,24 +19,37 @@ function stripAnsi(str) {
 }
 
 const DANGEROUS_PATTERNS = [
-  /\brm\s+-rf\b/i,
-  /\bDROP\s+(?:TABLE|DATABASE|SCHEMA)\b/i,
+  // Recursive delete in any flag order: rm -rf, -fr, -Rf, -fR, -r -f, --recursive --force
+  /\brm\s+(?:-[a-zA-Z]*[rRfF][a-zA-Z]*\b|--(?:recursive|force)\b)(?:\s+(?:-[a-zA-Z]*[rRfF][a-zA-Z]*\b|--(?:recursive|force)\b))*/i,
+  // find … -delete / -exec rm
+  /\bfind\s+\S+.*-(?:delete|exec\s+rm)\b/i,
+  // Destructive SQL
+  /\bDROP\s+(?:TABLE|DATABASE|SCHEMA|INDEX|VIEW)\b/i,
   /\bDELETE\s+FROM\b/i,
-  /\bTRUNCATE\b/i,
-  /\bshutdown\b/i,
-  /\breboot\b/i,
-  /\bmkfs\b/i,
-  /\bdd\s+if=/i,
-  /\bchmod\s+-?R?\s*777\b/i,
+  /\bTRUNCATE\s+(?:TABLE\s+)?\w/i,
+  // Power / boot
+  /\b(?:shutdown|halt|poweroff|reboot|init\s+0|init\s+6)\b/i,
+  // Block-device wipes
+  /\bmkfs(?:\.\w+)?\b/i,
+  /\bdd\s+(?:if|of)=/i,
+  />\s*\/dev\/(?:sd[a-z]|nvme|hd[a-z]|disk\d|null\s*;\s*rm)/i,
+  // Permission / ownership chaos
+  /\bchmod\s+-?R?\s*0?[67]77\b/i,
   /\bchown\s+-R\b/i,
-  /\bgit\s+push\s+(?:-f|--force)/i,
+  // Git foot-guns
+  /\bgit\s+push\s+(?:-f|--force|--force-with-lease)/i,
   /\bgit\s+reset\s+--hard\b/i,
   /\bgit\s+clean\s+-[fdx]/i,
   /\bgit\s+branch\s+-D\b/i,
+  // Package publishing / supply-chain
   /\bnpm\s+publish\b/i,
-  /\bcurl\s+[^|]*\|\s*(?:bash|sh|zsh)\b/i,
-  /\bwget\s+[^|]*\|\s*(?:bash|sh)\b/i,
-  /:\(\)\s*{\s*:\|:&\s*}/, // fork bomb
+  /\bnpm\s+unpublish\b/i,
+  // Pipe-to-shell from network
+  /\b(?:curl|wget|fetch)\s+[^|;]*\|\s*(?:bash|sh|zsh|ksh|fish)\b/i,
+  // Classic fork bomb
+  /:\s*\(\)\s*{\s*:\s*\|\s*:\s*&\s*}\s*;?\s*:/,
+  // sudo + any of the above passes through (bare `sudo` alone is fine)
+  /\bsudo\s+(?:rm|mkfs|dd|shutdown|reboot|chmod\s+777|chown\s+-R)\b/i,
 ];
 
 function isDangerous(text) {

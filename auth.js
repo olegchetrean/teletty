@@ -92,54 +92,9 @@ function isAllowed(telegramId) {
   return ALLOWED_USER_IDS.has(String(telegramId));
 }
 
-/**
- * Verify a Telegram Login Widget payload.
- *
- * The widget posts {id, first_name, last_name, username, photo_url, auth_date,
- * hash}. The check is: build a "data_check_string" of the remaining keys sorted
- * alphabetically as `key=value` joined by '\n', then compare its HMAC-SHA256
- * (with key = SHA256(BOT_TOKEN)) against the supplied hash. Note: this differs
- * from initData where the secret is HMAC("WebAppData", BOT_TOKEN).
- *
- * See: https://core.telegram.org/widgets/login#checking-authorization
- *
- * Returns { telegramId, authDate } on success, null on failure.
- */
-function verifyTelegramLogin(authData) {
-  if (!authData || !BOT_TOKEN) return null;
-  const data = typeof authData === 'string' ? JSON.parse(authData) : { ...authData };
-  const hash = data.hash;
-  if (!hash || typeof hash !== 'string') return null;
-  delete data.hash;
-
-  const dataCheckString = Object.keys(data)
-    .sort()
-    .map((k) => `${k}=${data[k]}`)
-    .join('\n');
-
-  const secretKey = crypto.createHash('sha256').update(BOT_TOKEN).digest();
-  const expectedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-
-  try {
-    if (expectedHash.length !== hash.length ||
-        !crypto.timingSafeEqual(Buffer.from(expectedHash, 'hex'), Buffer.from(hash, 'hex'))) {
-      return null;
-    }
-  } catch { return null; }
-
-  // Reject auth data older than 24 hours — generous because Login Widget
-  // sessions are not as transient as Mini App launches, but never indefinite.
-  const authDate = parseInt(data.auth_date, 10);
-  if (isNaN(authDate) || Date.now() / 1000 - authDate > 24 * 60 * 60) return null;
-  if (!data.id) return null;
-
-  return { telegramId: String(data.id), authDate };
-}
-
 module.exports = {
   verifyBotJWT,
   verifyTelegramInitData,
-  verifyTelegramLogin,
   createSessionToken,
   verifySessionToken,
   isAllowed,

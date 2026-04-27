@@ -19,7 +19,7 @@ leak all three secrets simultaneously.
 
 ## How the bot is bound to this server
 
-There is no "shared service" — the binding is purely cryptographic.
+There is no shared service — the binding is purely cryptographic.
 
 ```
 You at @BotFather                   Your server (.env)
@@ -28,17 +28,16 @@ You at @BotFather                   Your server (.env)
                                    SESSION_SECRET   = openssl rand -hex 32
                                    ALLOWED_USER_IDS = your numeric tg id
 
-/mybots → Menu Button URL ─────►   https://terminal.yourdomain.com/
-/mybots → Domain (login widget) ►  terminal.yourdomain.com   (optional)
+/mybots → Menu Button URL ─────►   https://your-public-url/
 ```
 
 The Mini App URL you set in BotFather is NOT a secret — anyone can see it. The
 only thing that matters is that the server with that URL has YOUR `BOT_TOKEN`.
 
-## What happens at login (Path A — Mini App)
+## What happens at login
 
-1. You tap the bot's Menu Button in Telegram.
-2. Telegram opens `https://terminal.yourdomain.com/` in a WebView and injects
+1. You tap the bot's Menu Button in Telegram (works on phone AND on Telegram Desktop).
+2. Telegram opens `https://your-public-url/` in a WebView and injects
    `Telegram.WebApp.initData` — a signed payload that includes your numeric
    `user.id` and an `auth_date`.
 3. The browser POSTs `initData` to `/auth`.
@@ -52,37 +51,12 @@ only thing that matters is that the server with that URL has YOUR `BOT_TOKEN`.
    `SESSION_SECRET`, valid for 4 hours.
 8. WebSocket upgrade re-verifies the JWT and the IP on every connection.
 
-## What happens at login (Path B — Login Widget, optional)
-
-For accessing teletty from a desktop browser when not inside the Telegram app.
-
-1. Set `LOGIN_WIDGET_BOT=yourbot_username` in `.env`.
-2. Whitelist your domain via `@BotFather → /setdomain → terminal.yourdomain.com`.
-   Telegram refuses to render the widget if the domain isn't whitelisted, so
-   nobody can host a phishing copy of the widget for your bot on a different
-   domain.
-3. User visits `https://terminal.yourdomain.com/` in any browser. The page
-   detects there is no `Telegram.WebApp` and renders the official Login
-   Widget script from `telegram.org`.
-4. User taps "Log in with Telegram" → Telegram OAuth popup → on success, the
-   widget calls `onTelegramAuth(user)` with `{id, first_name, username,
-   auth_date, hash, ...}`.
-5. Browser POSTs the payload to `/auth/login`.
-6. Server verifies the hash with key = `SHA256(BOT_TOKEN)` (this is a
-   different scheme than the Mini App initData but the principle is the same).
-7. Same `ALLOWED_USER_IDS` check.
-8. Same JWT issued.
-
-A user who is not in `ALLOWED_USER_IDS` will see "Access denied" even if their
-Telegram login is genuine.
-
 ## Why I can trust this
 
 Threat: **somebody steals the URL and tries to log in themselves.**
 - They reach the page. They cannot produce valid `initData` because they don't
-  have `BOT_TOKEN`. They cannot get a valid Login Widget signature for your
-  bot because Telegram only signs after they pass an OAuth flow that already
-  reveals their user id — which won't be in your `ALLOWED_USER_IDS`.
+  have `BOT_TOKEN`. The Mini App they'd open with their own bot would carry
+  THEIR `user.id`, which won't be in your `ALLOWED_USER_IDS`.
   Result: `403 Access denied`.
 
 Threat: **somebody intercepts a session token (e.g. WiFi sniff).**
@@ -91,8 +65,7 @@ Threat: **somebody intercepts a session token (e.g. WiFi sniff).**
 
 Threat: **somebody runs a phishing copy of the Mini App on a different domain.**
 - Mini Apps are launched from inside Telegram via the Menu Button URL you set
-  at BotFather. There is no other entry point. For Login Widget, Telegram
-  refuses to render it on any domain except the one you set with `/setdomain`.
+  at BotFather. There is no other entry point.
 
 Threat: **somebody compromises my server filesystem.**
 - They get `BOT_TOKEN`, `SESSION_SECRET`, `.env` — game over for the bot. The
@@ -103,23 +76,53 @@ Threat: **somebody compromises my server filesystem.**
   randomly generated `SESSION_SECRET` — a missing secret would silently
   invalidate all sessions on every restart.
 
+Threat: **my Telegram account itself gets compromised.**
+- SIM swap, leaked SMS code, session hijack on another device → the attacker
+  becomes you, and teletty cannot tell the difference. **Mitigation: turn on
+  Telegram's two-step verification (cloud password) and never share your
+  Telegram session.**
+
+## Honest limits
+
+These are NOT hypothetical attacks; they are real trade-offs you should know:
+
+1. **Auto-approve mode is heuristic, not safe.** It blocks `rm -rf`, force-push,
+   `chmod 777`, `curl|sh`, etc., but the regex set is not exhaustive. If you
+   leave auto-approve on for a long agent session, you WILL eventually click
+   "Yes" on something the heuristic missed. Treat it as a convenience, not a
+   safety net.
+2. **Don't run the server as root.** The systemd unit in
+   `docs/AGENT-INSTALL-PROMPT.md` uses your normal user. If you run
+   `node server.js` directly as root, every Telegram-side approval becomes
+   root-on-your-server.
+3. **Don't enable `MGMT_TOKEN` unless you actually need it.** The `/api/exec`
+   endpoint is RCE-as-a-service for whoever holds the token. If you do enable
+   it, also set `MGMT_AUDIT_LOG=/var/log/teletty/exec.log`.
+4. **Don't enable `AUDIT_LOG_DIR` casually.** It captures every prompt, every
+   reply, every paste — including secrets you type.
+5. **Cloudflare Tunnel ≠ end-to-end.** If you use `cloudflared tunnel` for
+   HTTPS (the easiest install path), Cloudflare terminates TLS and can see
+   plaintext terminal traffic. Auth is unaffected (HMAC verifies at origin),
+   but the content is visible to Cloudflare. nginx + your own domain is the
+   privacy-preserving option.
+6. **`ALLOWED_USER_IDS` is multi-id but not multi-tenant.** Listing several
+   Telegram IDs gives them isolated tmux sessions but the SAME OS user. They
+   can read each other's files.
+7. **Voice transcription is opt-in cloud.** If you set `AZURE_OPENAI_*`, audio
+   leaves your server for Microsoft. Leave the variables empty to keep voice
+   on the device (browser Web Speech API).
+
 ## Recommended posture
 
 - Run with `NODE_ENV=production`. teletty will fail-fast on missing required
   env. Don't disable that.
-- Set `ALLOWED_ORIGINS=https://terminal.yourdomain.com` (or whatever your
-  domain is). With this set, WebSocket upgrades from any other origin get
-  `403`.
+- Set `ALLOWED_ORIGINS=https://your-public-url`. With this set, WebSocket
+  upgrades from any other origin get `403`.
 - Don't set `MGMT_TOKEN` unless you actually need the emergency `/api/exec`
-  endpoint. If you do, also set `MGMT_AUDIT_LOG=/var/log/teletty/exec.log` to
-  keep an append-only record.
-- Leave `AUDIT_LOG_DIR` empty unless you specifically want full pane capture
-  (it logs every prompt, every reply, every paste — sensitive).
-- Use the supplied `nginx.conf.template` — it ships HSTS, X-Content-Type-
-  Options, X-Frame-Options, Referrer-Policy, and Permissions-Policy.
-- Whitelist your bot's domain via `@BotFather → /setdomain` even if you don't
-  use the Login Widget — that is what locks `t.me/yourbot?startapp=...`-style
-  deep links to your server.
+  endpoint.
+- Leave `AUDIT_LOG_DIR` empty unless you specifically want full pane capture.
+- Use a non-root systemd `User=` for the service.
+- Turn on Telegram cloud password (Settings → Privacy → Two-Step Verification).
 
 ## Rotating credentials
 

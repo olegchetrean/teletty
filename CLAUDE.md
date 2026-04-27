@@ -38,5 +38,5 @@ Telegram Mini App — full terminal on your phone with multi-agent smart buttons
 - Requires: Node.js >= 20, tmux, HTTPS (Telegram requirement)
 
 ## Testing
-- 40 tests: `npm test` (Node built-in test runner)
-- Coverage: ANSI strip, generic prompts, every agent profile, danger flag patterns, detectAgent, HMAC/JWT auth
+- 52 tests: `npm test` (Node built-in test runner)
+- Coverage: ANSI strip, generic prompts, every agent profile, danger flag patterns (rm -rf/-fr/-Rf/--recursive, find -delete, force-push, chmod 777, dd, fork bomb, sudo rm, plus negative cases), detectAgent, HMAC/JWT auth
