@@ -127,6 +127,13 @@ Tell me to do these steps manually in Telegram:
 7. For URL: enter the HTTPS URL from Step 4 (https://MYDOMAIN.COM/ or the cloudflare tunnel URL)
 8. For button text: enter "Terminal"
 
+(Optional, only if you want desktop-browser login via Telegram Login Widget)
+9. Send /setdomain to @BotFather → pick the bot → enter your bare domain
+   (e.g. terminal.yourdomain.com, no https://). This authorises Telegram to
+   sign Login Widget requests for that domain.
+10. Add LOGIN_WIDGET_BOT=yourbot_username (no @) to /opt/teletty/.env and
+    restart the systemd service.
+
 ## Step 7: Verify everything works
 
 Run these checks and report results:

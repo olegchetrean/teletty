@@ -143,6 +143,18 @@ In `NODE_ENV=production` the server refuses to start if any of these are missing
 | `AUDIT_LOG_DIR` | (disabled) | Opt-in tmux pipe-pane audit log directory |
 | `VOICE_LANGUAGE` | en | Voice recognition language |
 
+## Authentication
+
+Two paths, same trust model. See [docs/SECURITY.md](docs/SECURITY.md) for the full chain-of-trust write-up and rotation runbook.
+
+| Path | When | Endpoint |
+|------|------|----------|
+| **Mini App initData** (default) | You open the bot's Menu Button inside Telegram | `POST /auth` |
+| **Login Widget** (optional) | You open `https://terminal.yourdomain.com/` in a desktop browser, no Telegram app | `POST /auth/login` (enabled by setting `LOGIN_WIDGET_BOT=yourbot_username` and `/setdomain` in BotFather) |
+
+Both paths verify a Telegram-signed payload using `BOT_TOKEN`, then check the
+user id against `ALLOWED_USER_IDS`, then issue an IP-bound JWT (4 h).
+
 ## Security — 7 Layers
 
 Your teletty instance is **your private terminal**. No one else can access it.

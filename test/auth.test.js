@@ -85,3 +85,63 @@ describe('verifyTelegramInitData', () => {
     assert.strictEqual(auth.verifyTelegramInitData(null), null);
   });
 });
+
+describe('verifyTelegramLogin', () => {
+  function signLoginPayload(payload, botToken) {
+    const data = { ...payload };
+    delete data.hash;
+    const dataCheckString = Object.keys(data)
+      .sort()
+      .map((k) => `${k}=${data[k]}`)
+      .join('\n');
+    const secretKey = crypto.createHash('sha256').update(botToken).digest();
+    return crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+  }
+
+  it('verifies a fresh, correctly signed payload', () => {
+    const payload = {
+      id: 12345,
+      first_name: 'Test',
+      username: 'testuser',
+      auth_date: Math.floor(Date.now() / 1000),
+    };
+    payload.hash = signLoginPayload(payload, 'test_bot_token_123');
+    const result = auth.verifyTelegramLogin(payload);
+    assert.ok(result);
+    assert.strictEqual(result.telegramId, '12345');
+  });
+
+  it('rejects payload with bad hash', () => {
+    const payload = {
+      id: 12345,
+      first_name: 'Test',
+      auth_date: Math.floor(Date.now() / 1000),
+      hash: 'deadbeef'.repeat(8),
+    };
+    assert.strictEqual(auth.verifyTelegramLogin(payload), null);
+  });
+
+  it('rejects payload older than 24 hours', () => {
+    const payload = {
+      id: 12345,
+      first_name: 'Test',
+      auth_date: Math.floor(Date.now() / 1000) - 25 * 60 * 60,
+    };
+    payload.hash = signLoginPayload(payload, 'test_bot_token_123');
+    assert.strictEqual(auth.verifyTelegramLogin(payload), null);
+  });
+
+  it('rejects payload missing id', () => {
+    const payload = {
+      first_name: 'Test',
+      auth_date: Math.floor(Date.now() / 1000),
+    };
+    payload.hash = signLoginPayload(payload, 'test_bot_token_123');
+    assert.strictEqual(auth.verifyTelegramLogin(payload), null);
+  });
+
+  it('rejects empty input', () => {
+    assert.strictEqual(auth.verifyTelegramLogin(null), null);
+    assert.strictEqual(auth.verifyTelegramLogin({}), null);
+  });
+});

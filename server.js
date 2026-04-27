@@ -115,6 +115,8 @@ app.get('/health', (req, res) => {
 });
 
 // ─── Telegram Auth ───────────────────────────────────────────────────────────
+// Path A — Mini App initData (the primary path; HMAC signed by Telegram with
+// HMAC("WebAppData", BOT_TOKEN)).
 app.post('/auth', authLimiter, (req, res) => {
   const { token, initData } = req.body;
   if (!initData) return res.status(400).json({ error: 'Missing initData' });
@@ -135,6 +137,28 @@ app.post('/auth', authLimiter, (req, res) => {
   const sessionToken = auth.createSessionToken(String(tgData.telegramId), clientIp);
   res.json({ sessionToken });
 });
+
+// Path B — Telegram Login Widget (for desktop browsers outside Telegram).
+// Enabled only when LOGIN_WIDGET_BOT is set to the bot's @username (without @).
+// Server verifies HMAC with key = SHA256(BOT_TOKEN), then the same whitelist +
+// IP-bound JWT issued for the Mini App path.
+const LOGIN_WIDGET_BOT = (process.env.LOGIN_WIDGET_BOT || '').replace(/^@/, '').trim();
+
+app.get('/auth/config', (req, res) => {
+  res.json({ loginWidgetBot: LOGIN_WIDGET_BOT || null });
+});
+
+if (LOGIN_WIDGET_BOT) {
+  app.post('/auth/login', authLimiter, (req, res) => {
+    const tgData = auth.verifyTelegramLogin(req.body || {});
+    if (!tgData) return res.status(401).json({ error: 'Invalid Telegram login data' });
+    if (!auth.isAllowed(tgData.telegramId)) return res.status(403).json({ error: 'Access denied' });
+    const clientIp = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.ip;
+    const sessionToken = auth.createSessionToken(String(tgData.telegramId), clientIp);
+    res.json({ sessionToken });
+  });
+  console.log(`[teletty] Telegram Login Widget enabled for @${LOGIN_WIDGET_BOT}`);
+}
 
 // ─── Voice Transcription (optional) ─────────────────────────────────────────
 // Server-side voice-to-text via Azure OpenAI Whisper.
